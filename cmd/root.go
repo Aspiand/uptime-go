@@ -81,8 +81,14 @@ func runMonitorMode() {
 		os.Exit(ExitErrorConfig)
 	}
 
+	// Parse mysql configuration
+	mysql_config, err := configReader.GetMysqlConfig()
+	if err != nil {
+		fmt.Println("Failed to read mysql configuration")
+	}
+
 	// Get mysql connection
-	db, err := database.InitializeMysqlDatabase()
+	db, err := database.InitializeMysqlDatabase(*mysql_config)
 	if err != nil {
 		log.Fatalf("failed to connect to mysql database: %v", err)
 	}

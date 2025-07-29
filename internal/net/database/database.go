@@ -26,6 +26,14 @@ type MysqlDB struct {
 	DB *gorm.DB
 }
 
+type MysqlConfig struct {
+	Username string
+	Password string
+	Host     string
+	Port     int
+	Database string
+}
+
 type DomainUptimes struct {
 	ID              int           `json:"id"`
 	URL             string        `json:"url"`
@@ -103,15 +111,19 @@ func (db *Database) SaveResults(results *config.CheckResults) error {
 	return err
 }
 
-func InitializeMysqlDatabase() (*MysqlDB, error) {
-	dsn := "root:root@tcp(127.0.0.1:3306)/ojtg"
-	mysql_connection, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+func InitializeMysqlDatabase(config MysqlConfig) (*MysqlDB, error) {
+	mysql_connection, err := gorm.Open(mysql.Open(config.parse()), &gorm.Config{})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	return &MysqlDB{DB: mysql_connection}, nil
+}
+
+func (c *MysqlConfig) parse() string {
+	// "user:pass@tcp(127.0.0.1:3306)/dbname"
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", c.Username, c.Password, c.Host, c.Port, c.Database)
 }
 
 func (db *MysqlDB) GetDomains() []*config.NetworkConfig {

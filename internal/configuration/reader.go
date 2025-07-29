@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"uptime-go/internal/net/config"
+	"uptime-go/internal/net/database"
 
 	"github.com/spf13/viper"
 )
@@ -40,6 +41,21 @@ func (c *ConfigReader) setDefaults() {
 	c.viper.SetDefault("refresh_interval", "10")
 	c.viper.SetDefault("follow_redirects", true)
 	c.viper.SetDefault("skip_ssl", false)
+}
+
+func (c *ConfigReader) GetMysqlConfig() (*database.MysqlConfig, error) {
+	config, ok := c.viper.Get("mysql").(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("invalid mysql configuration format")
+	}
+
+	return &database.MysqlConfig{
+		Username: config["username"].(string),
+		Password: config["password"].(string),
+		Host:     config["host"].(string),
+		Port:     config["port"].(int),
+		Database: config["database"].(string),
+	}, nil
 }
 
 func (c *ConfigReader) GetUptimeConfig() ([]*config.NetworkConfig, error) {
