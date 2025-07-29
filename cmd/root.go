@@ -81,14 +81,14 @@ func runMonitorMode() {
 		os.Exit(ExitErrorConfig)
 	}
 
+	// Get mysql connection
 	db, err := database.InitializeMysqlDatabase()
 	if err != nil {
-		log.Fatalf("database failed: %v", err)
+		log.Fatalf("failed to connect to mysql database: %v", err)
 	}
 
-	db_domains := db.GetDomains()
-
-	uptimeConfigs = append(uptimeConfigs, db_domains...)
+	// Merge data from config and mysql database
+	uptimeConfigs = append(uptimeConfigs, db.GetDomains()...)
 
 	// Initialize and start monitor
 	uptimeMonitor, err := monitor.NewUptimeMonitor(uptimeConfigs)

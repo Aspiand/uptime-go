@@ -33,6 +33,15 @@ type DomainUptimes struct {
 	RefreshInterval time.Duration `gorm:"column:uptime_check_interval_in_minutes" json:"refresh_interval"`
 }
 
+func (d *DomainUptimes) ToNetworkConfig() *config.NetworkConfig {
+	return &config.NetworkConfig{
+		URL:             d.URL,
+		RefreshInterval: d.RefreshInterval * time.Minute,
+		FollowRedirects: true,
+		SkipSSL:         true,
+	}
+}
+
 func InitializeDatabase() (*gorm.DB, error) {
 	// Create the directory if it doesn't exist
 	if err := os.MkdirAll("/var/uptime-go/db", 0755); err != nil {
@@ -96,21 +105,13 @@ func (db *Database) SaveResults(results *config.CheckResults) error {
 
 func InitializeMysqlDatabase() (*MysqlDB, error) {
 	dsn := "root:root@tcp(127.0.0.1:3306)/ojtg"
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	mysql_connection, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	return &MysqlDB{DB: db}, nil
-}
-
-func (d *DomainUptimes) ToNetworkConfig() *config.NetworkConfig {
-	return &config.NetworkConfig{
-		URL:             d.URL,
-		RefreshInterval: d.RefreshInterval * time.Minute,
-		FollowRedirects: true,
-		SkipSSL:         true,
-	}
+	return &MysqlDB{DB: mysql_connection}, nil
 }
 
 func (db *MysqlDB) GetDomains() []*config.NetworkConfig {
