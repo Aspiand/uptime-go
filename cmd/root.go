@@ -5,11 +5,13 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
 	"uptime-go/internal/configuration"
 	"uptime-go/internal/monitor"
+	"uptime-go/internal/net/database"
 
 	"github.com/spf13/cobra"
 )
@@ -78,6 +80,15 @@ func runMonitorMode() {
 		fmt.Fprintln(os.Stderr, "No valid website configurations found in config file")
 		os.Exit(ExitErrorConfig)
 	}
+
+	db, err := database.InitializeMysqlDatabase()
+	if err != nil {
+		log.Fatalf("database failed: %v", err)
+	}
+
+	db_domains := db.GetDomains()
+
+	uptimeConfigs = append(uptimeConfigs, db_domains...)
 
 	// Initialize and start monitor
 	uptimeMonitor, err := monitor.NewUptimeMonitor(uptimeConfigs)
