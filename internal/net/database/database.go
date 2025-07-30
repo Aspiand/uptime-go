@@ -81,3 +81,11 @@ func (db *Database) SaveResults(results *config.CheckResults) error {
 	})
 	return err
 }
+
+func (db *Database) GetLastRecord() config.CheckResults {
+	var result config.CheckResults
+
+	db.DB.Order("last_check desc").First(&result)
+
+	return result
+}

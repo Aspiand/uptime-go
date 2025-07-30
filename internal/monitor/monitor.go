@@ -1,11 +1,8 @@
 package monitor
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -108,23 +105,13 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.NetworkConfig) {
 		}
 	}
 
-	var statusText string
-	baseURL := "http://localhost:8005"
-
-	if result.IsUp {
-		statusText = "UP"
-		baseURL += "/up"
-	} else {
-		statusText = "DOWN"
-		baseURL += "/down"
-	}
-
-	var client = &http.Client{}
-
-	payload, _ := json.Marshal(result)
-	client, _ = http.NewRequest("POST", baseURL, bytes.NewBuffer(payload))
+	net.NotifyHook(m.db, result)
 
 	// Log the result
+	statusText := "DOWN"
+	if result.IsUp {
+		statusText = "UP"
+	}
 	log.Printf("%s - %s - Response time: %v - Status: %d",
 		cfg.URL, statusText, result.ResponseTime.Round(time.Millisecond), result.StatusCode)
 

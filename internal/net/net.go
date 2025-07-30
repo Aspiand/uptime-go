@@ -1,12 +1,16 @@
 package net
 
 import (
+	"bytes"
 	"crypto/tls"
+	"encoding/json"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"time"
 	"uptime-go/internal/net/config"
+	"uptime-go/internal/net/database"
 )
 
 type NetworkConfig struct {
@@ -66,4 +70,54 @@ func isIPAddress(host string) bool {
 	hostname := u.Hostname()
 
 	return net.ParseIP(hostname) != nil
+}
+
+func NotifyHook(db *database.Database, result *config.CheckResults) {
+	var payload []byte
+	var err error
+	url := "http://localhost:8005/uptime"
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	if result.IsUp {
+		url += "/up"
+		lastRecord := db.GetLastRecord()
+
+		if lastRecord.IsUp {
+			payload, err = json.Marshal(result)
+		} else {
+			payload, err = json.Marshal(struct {
+				*config.CheckResults
+				DownTime string `json:"downtime"`
+			}{
+				result,
+				result.LastCheck.Sub(lastRecord.LastCheck).String(),
+			})
+		}
+	} else {
+		url += "/down"
+		payload, err = json.Marshal(result)
+	}
+
+	if err != nil {
+		log.Printf("Error marshalling JSON for %s: %v", result.URL, err)
+		return
+	}
+
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		log.Printf("Error creating request for %s: %v", url, err)
+		return
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+
+	response, err := client.Do(request)
+	if err != nil {
+		log.Printf("error while doing request to %s: %v", url, err)
+		return
+	}
+
+	defer response.Body.Close()
 }
