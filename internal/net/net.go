@@ -92,7 +92,7 @@ func NotifyHook(db *database.Database, result *config.CheckResults) {
 				DownTime string `json:"downtime"`
 			}{
 				result,
-				result.LastCheck.Sub(lastUpRecord.LastCheck).String(),
+				result.LastCheck.Sub(lastUpRecord.LastCheck).Round(time.Second).String(),
 			})
 		}
 	} else {
