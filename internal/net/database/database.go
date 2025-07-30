@@ -82,10 +82,18 @@ func (db *Database) SaveResults(results *config.CheckResults) error {
 	return err
 }
 
-func (db *Database) GetLastRecord() config.CheckResults {
+func (db *Database) GetLastRecord(url string) config.CheckResults {
 	var result config.CheckResults
 
-	db.DB.Order("last_check desc").First(&result)
+	db.DB.Where("url = ?", url).Order("last_check desc").First(&result)
+
+	return result
+}
+
+func (db *Database) GetLastUpRecord(url string) config.CheckResults {
+	var result config.CheckResults
+
+	db.DB.Where("url = ? AND is_up = 1", url).Order("last_check desc").First(&result)
 
 	return result
 }
