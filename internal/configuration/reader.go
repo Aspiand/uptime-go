@@ -121,7 +121,7 @@ func (c *ConfigReader) GetDomains(path string) ([]string, error) {
 
 		c.ReadConfig(filePath)
 		if domain, ok := c.viper.Get("domain").(string); ok {
-			domains = append(domains, domain)
+			domains = append(domains, "https://"+domain)
 			continue
 		}
 
