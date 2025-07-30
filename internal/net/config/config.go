@@ -16,7 +16,7 @@ type CheckResults struct {
 	URL          string        `json:"url"`
 	LastCheck    time.Time     `json:"last_check"`
 	ResponseTime time.Duration `json:"response_time"`
-	IsUp         bool          `json:"is_up"`
+	IsUp         bool          `json:"-"`
 	StatusCode   int           `json:"status_code"`
 	ErrorMessage string        `json:"error_message"`
 }

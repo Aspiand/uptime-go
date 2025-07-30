@@ -2,6 +2,8 @@ package configuration
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 	"uptime-go/internal/net/config"
 
@@ -97,4 +99,34 @@ func (c *ConfigReader) GetUptimeConfig() ([]*config.NetworkConfig, error) {
 	}
 
 	return configList, nil
+}
+
+func (c *ConfigReader) GetDomains(path string) ([]string, error) {
+	var domains []string
+	files, err := os.ReadDir(path)
+	if err != nil {
+		return nil, fmt.Errorf("error while reading directory %s", path)
+	}
+
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+
+		filePath := path + f.Name()
+
+		c.ReadConfig(filePath)
+		if domain, ok := c.viper.Get("domain").(string); ok {
+			domains = append(domains, domain)
+			continue
+		}
+
+		fmt.Printf("can't read domain at %s\n", filePath)
+	}
+
+	return domains, nil
 }
