@@ -108,13 +108,13 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.NetworkConfig) {
 	net.NotifyHook(m.db, result)
 
 	// Log the result
-	// statusText := "DOWN"
-	// if result.IsUp {
-	// 	statusText = "UP"
-	// }
+	statusText := "DOWN"
+	if result.IsUp {
+		statusText = "UP"
+	}
 
-	// log.Printf("%s - %s - Response time: %v - Status: %d",
-	// 	cfg.URL, statusText, result.ResponseTime.Round(time.Millisecond), result.StatusCode)
+	log.Printf("%s - %s - Response time: %v - Status: %d",
+		cfg.URL, statusText, result.ResponseTime.Round(time.Millisecond), result.StatusCode)
 
 	// Save result to database
 	if err := m.db.SaveResults(result); err != nil {

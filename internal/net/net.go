@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -86,10 +85,8 @@ func NotifyHook(db *database.Database, result *config.CheckResults) {
 		lastUpRecord := db.GetLastUpRecord(result.URL)
 
 		if db.GetLastRecord(result.URL).IsUp {
-			fmt.Println("Last record up")
 			payload, err = json.Marshal(result)
 		} else {
-			fmt.Println("Last record down && downtime")
 			payload, err = json.Marshal(struct {
 				*config.CheckResults
 				DownTime string `json:"downtime"`
@@ -99,7 +96,6 @@ func NotifyHook(db *database.Database, result *config.CheckResults) {
 			})
 		}
 	} else {
-		fmt.Println("down")
 		url += "/down"
 		payload, err = json.Marshal(result)
 	}
@@ -119,7 +115,7 @@ func NotifyHook(db *database.Database, result *config.CheckResults) {
 
 	response, err := client.Do(request)
 	if err != nil {
-		// log.Printf("error while doing request to %s: %v", url, err)
+		log.Printf("error while doing request to %s: %v", url, err)
 		return
 	}
 
