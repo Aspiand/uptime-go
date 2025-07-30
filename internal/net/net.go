@@ -83,8 +83,11 @@ func NotifyHook(db *database.Database, result *config.CheckResults) {
 	if result.IsUp {
 		url += "/up"
 		lastUpRecord := db.GetLastUpRecord(result.URL)
+		lastRecord := db.GetLastRecord(result.URL)
 
-		if db.GetLastRecord(result.URL).IsUp {
+		if lastUpRecord.LastCheck.IsZero() ||
+			lastRecord.LastCheck.IsZero() ||
+			lastRecord.IsUp {
 			payload, err = json.Marshal(result)
 		} else {
 			payload, err = json.Marshal(struct {
@@ -92,7 +95,9 @@ func NotifyHook(db *database.Database, result *config.CheckResults) {
 				DownTime string `json:"downtime"`
 			}{
 				result,
-				result.LastCheck.Sub(lastUpRecord.LastCheck).Round(time.Second).String(),
+				result.LastCheck.
+					Sub(lastUpRecord.LastCheck).
+					Round(time.Second).String(),
 			})
 		}
 	} else {

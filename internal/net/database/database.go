@@ -85,7 +85,9 @@ func (db *Database) SaveResults(results *config.CheckResults) error {
 func (db *Database) getLastRecord(query string, args ...string) config.CheckResults {
 	var result config.CheckResults
 
-	db.DB.Where(query, args).Order("last_check desc").First(&result)
+	db.DB.Where(query, args).
+		Order("last_check desc").
+		Find(&result)
 
 	return result
 }
