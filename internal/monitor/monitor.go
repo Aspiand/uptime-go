@@ -96,12 +96,18 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.NetworkConfig) {
 		log.Printf("Error checking %s: %v", cfg.URL, err)
 		// Create a failed check result
 		result = &config.Monitor{
+			ID:           database.GenerateRandomID(),
 			URL:          cfg.URL,
 			LastCheck:    time.Now(),
 			ResponseTime: 0,
 			IsUp:         false,
 			StatusCode:   0,
 			ErrorMessage: err.Error(),
+			// TODO: add ssl expirate date
+		}
+
+		if os.IsTimeout(err) {
+			result.ResponseTime = int64(cfg.Timeout)
 		}
 	}
 
@@ -109,16 +115,33 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.NetworkConfig) {
 
 	// Log the result
 	statusText := "UP"
+
 	if !result.IsUp {
 		statusText = "DOWN"
-		// TODO: save incident
+		m.db.SaveRecord(&config.Incident{
+			ID:              database.GenerateRandomID(),
+			URL:             result.URL,
+			Body:            result.ErrorMessage,
+			StatusCode:      result.StatusCode,
+			ResponseTime:    result.ResponseTime,
+			SSLExpirateDate: result.SSLExpirateDate,
+		})
 	}
 
 	log.Printf("%s - %s - Response time: %v - Status: %d",
 		cfg.URL, statusText, result.ResponseTime, result.StatusCode)
 
 	// Save result to database
+
 	if err := m.db.SaveRecord(result); err != nil {
 		log.Printf("Failed to save result to database: %v", err)
+	}
+
+	if err := m.db.SaveRecord(&config.MonitorHistory{
+		ID:           database.GenerateRandomID(),
+		URL:          result.URL,
+		ResponseTime: result.ResponseTime,
+	}); err != nil {
+		log.Printf("Failed to save history to database: %v", err)
 	}
 }

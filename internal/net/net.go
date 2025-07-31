@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"time"
 	"uptime-go/internal/net/config"
+	"uptime-go/internal/net/database"
 )
 
 type NetworkConfig struct {
@@ -53,12 +54,14 @@ func (nc *NetworkConfig) CheckWebsite() (*config.Monitor, error) {
 	isUp := success
 
 	return &config.Monitor{
+		ID:           database.GenerateRandomID(),
 		URL:          nc.URL,
 		LastCheck:    time.Now(),
 		ResponseTime: responseTime,
 		IsUp:         isUp,
 		StatusCode:   resp.StatusCode,
 		ErrorMessage: "",
+		// TODO: add ssl expirate date
 	}, nil
 }
 

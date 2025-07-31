@@ -76,6 +76,8 @@ func InitializeDatabase() (*gorm.DB, error) {
 	return db, nil
 }
 
+// TODO: upsert
+
 func (db *Database) SaveRecord(record any) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
