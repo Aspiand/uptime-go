@@ -111,13 +111,15 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.NetworkConfig) {
 		}
 	}
 
+	// lastRecord :=
+
 	// TODO: hook
 
 	// Log the result
-	statusText := "UP"
+	// statusText := "UP"
 
 	if !result.IsUp {
-		statusText = "DOWN"
+		// statusText = "DOWN"
 		m.db.SaveRecord(&config.Incident{
 			ID:              database.GenerateRandomID(),
 			URL:             result.URL,
@@ -128,12 +130,12 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.NetworkConfig) {
 		})
 	}
 
-	log.Printf("%s - %s - Response time: %v - Status: %d",
-		cfg.URL, statusText, result.ResponseTime, result.StatusCode)
+	// log.Printf("%s - %s - Response time: %v - Status: %d",
+	// 	cfg.URL, statusText, result.ResponseTime, result.StatusCode)
 
 	// Save result to database
 
-	if err := m.db.SaveRecord(result); err != nil {
+	if err := m.db.UpsertRecord(result); err != nil {
 		log.Printf("Failed to save result to database: %v", err)
 	}
 

@@ -76,23 +76,41 @@ func InitializeDatabase() (*gorm.DB, error) {
 	return db, nil
 }
 
-// TODO: upsert
-
-func (db *Database) SaveRecord(record any) error {
+func (db *Database) UpsertRecord(record any) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		// Create record if not exists else update
-		if err := tx.Clauses(
-			clause.OnConflict{UpdateAll: true},
-		).Create(record).Error; err != nil {
+		if err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "url"}},
+			UpdateAll: true,
+		}).Create(record).Error; err != nil {
 			return fmt.Errorf("failed to save record: %w", err)
 		}
 		return nil
 	})
-
 	return err
+}
+
+func (db *Database) SaveRecord(record any) error {
+	if err := db.DB.Create(record).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (db *Database) GetMonitorRecord(url string) *config.Monitor {
+	var record config.Monitor
+
+	if err := db.DB.
+		Where("url = ?", url).
+		Take(&record).Error; err != nil {
+		return nil
+	}
+
+	return &record
 }
 
 func generateRandomID(n int) string {
