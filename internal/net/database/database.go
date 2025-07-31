@@ -10,6 +10,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -62,7 +63,10 @@ func InitializeDatabase() (*gorm.DB, error) {
 	sqlDB.SetConnMaxIdleTime(30 * time.Minute)
 
 	// Migrate the schema
-	if err := db.AutoMigrate(&config.CheckResults{}); err != nil {
+	if err := db.AutoMigrate(
+		&config.CheckResults{},
+		&config.Incident{},
+	); err != nil {
 		return nil, fmt.Errorf("failed to migrate database schema: %w", err)
 	}
 
@@ -74,7 +78,10 @@ func (db *Database) SaveResults(results *config.CheckResults) error {
 	defer db.mutex.Unlock()
 
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(results).Error; err != nil {
+		// Create record if not exists else update
+		if err := tx.Clauses(
+			clause.OnConflict{UpdateAll: true},
+		).Create(results).Error; err != nil {
 			return fmt.Errorf("failed to save results: %w", err)
 		}
 		return nil

@@ -13,7 +13,7 @@ type NetworkConfig struct {
 }
 
 type CheckResults struct {
-	URL          string        `json:"url"`
+	URL          string        `json:"url" gorm:"primaryKey"`
 	LastCheck    time.Time     `json:"last_check"`
 	ResponseTime time.Duration `json:"response_time"`
 	IsUp         bool          `json:"-"`
