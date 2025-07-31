@@ -1,6 +1,8 @@
 package database
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"sync"
@@ -64,7 +66,8 @@ func InitializeDatabase() (*gorm.DB, error) {
 
 	// Migrate the schema
 	if err := db.AutoMigrate(
-		&config.CheckResults{},
+		&config.Monitor{},
+		&config.MonitorHistory{},
 		&config.Incident{},
 	); err != nil {
 		return nil, fmt.Errorf("failed to migrate database schema: %w", err)
@@ -73,7 +76,7 @@ func InitializeDatabase() (*gorm.DB, error) {
 	return db, nil
 }
 
-func (db *Database) SaveResults(results *config.CheckResults) error {
+func (db *Database) SaveRecord(record any) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -81,28 +84,21 @@ func (db *Database) SaveResults(results *config.CheckResults) error {
 		// Create record if not exists else update
 		if err := tx.Clauses(
 			clause.OnConflict{UpdateAll: true},
-		).Create(results).Error; err != nil {
-			return fmt.Errorf("failed to save results: %w", err)
+		).Create(record).Error; err != nil {
+			return fmt.Errorf("failed to save record: %w", err)
 		}
 		return nil
 	})
+
 	return err
 }
 
-func (db *Database) getLastRecord(query string, args ...string) config.CheckResults {
-	var result config.CheckResults
-
-	db.DB.Where(query, args).
-		Order("last_check desc").
-		Find(&result)
-
-	return result
+func generateRandomID(n int) string {
+	b := make([]byte, n)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
-func (db *Database) GetLastRecord(url string) config.CheckResults {
-	return db.getLastRecord("url = ?", url)
-}
-
-func (db *Database) GetLastUpRecord(url string) config.CheckResults {
-	return db.getLastRecord("url = ? AND is_up = 1", url)
+func GenerateRandomID() string {
+	return generateRandomID(4)
 }

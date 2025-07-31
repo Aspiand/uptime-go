@@ -95,7 +95,7 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.NetworkConfig) {
 	if err != nil {
 		log.Printf("Error checking %s: %v", cfg.URL, err)
 		// Create a failed check result
-		result = &config.CheckResults{
+		result = &config.Monitor{
 			URL:          cfg.URL,
 			LastCheck:    time.Now(),
 			ResponseTime: 0,
@@ -105,19 +105,20 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.NetworkConfig) {
 		}
 	}
 
-	net.NotifyHook(m.db, result)
+	// TODO: hook
 
 	// Log the result
-	statusText := "DOWN"
-	if result.IsUp {
-		statusText = "UP"
+	statusText := "UP"
+	if !result.IsUp {
+		statusText = "DOWN"
+		// TODO: save incident
 	}
 
 	log.Printf("%s - %s - Response time: %v - Status: %d",
-		cfg.URL, statusText, result.ResponseTime.Round(time.Millisecond), result.StatusCode)
+		cfg.URL, statusText, result.ResponseTime, result.StatusCode)
 
 	// Save result to database
-	if err := m.db.SaveResults(result); err != nil {
+	if err := m.db.SaveRecord(result); err != nil {
 		log.Printf("Failed to save result to database: %v", err)
 	}
 }

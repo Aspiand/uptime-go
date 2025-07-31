@@ -1,16 +1,12 @@
 package net
 
 import (
-	"bytes"
 	"crypto/tls"
-	"encoding/json"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"time"
 	"uptime-go/internal/net/config"
-	"uptime-go/internal/net/database"
 )
 
 type NetworkConfig struct {
@@ -21,7 +17,7 @@ type NetworkConfig struct {
 	SkipSSL         bool
 }
 
-func (nc *NetworkConfig) CheckWebsite() (*config.CheckResults, error) {
+func (nc *NetworkConfig) CheckWebsite() (*config.Monitor, error) {
 	client := &http.Client{
 		Timeout: nc.Timeout,
 
@@ -48,11 +44,15 @@ func (nc *NetworkConfig) CheckWebsite() (*config.CheckResults, error) {
 	}
 	defer resp.Body.Close()
 
-	responseTime := time.Since(start)
+	// if tls := resp.TLS; tls != nil {
+	// 	fmt.Printf("TLS: %v\n", resp.TLS.PeerCertificates[0].NotAfter.Format(time.RFC1123))
+	// }
+
+	responseTime := time.Since(start).Milliseconds()
 	success := resp.StatusCode >= 200 && resp.StatusCode < 300
 	isUp := success
 
-	return &config.CheckResults{
+	return &config.Monitor{
 		URL:          nc.URL,
 		LastCheck:    time.Now(),
 		ResponseTime: responseTime,
@@ -72,57 +72,57 @@ func isIPAddress(host string) bool {
 	return net.ParseIP(hostname) != nil
 }
 
-func NotifyHook(db *database.Database, result *config.CheckResults) {
-	var payload []byte
-	var err error
-	url := "http://localhost:8005/uptime"
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
+// func NotifyHook(db *database.Database, result *config.Monitor) {
+// 	var payload []byte
+// 	var err error
+// 	url := "http://localhost:8005/uptime"
+// 	client := &http.Client{
+// 		Timeout: 10 * time.Second,
+// 	}
 
-	if result.IsUp {
-		url += "/up"
-		lastUpRecord := db.GetLastUpRecord(result.URL)
-		lastRecord := db.GetLastRecord(result.URL)
+// 	if result.IsUp {
+// 		url += "/up"
+// 		lastUpRecord := db.GetLastUpRecord(result.URL)
+// 		lastRecord := db.GetLastRecord(result.URL)
 
-		if lastUpRecord.LastCheck.IsZero() ||
-			lastRecord.LastCheck.IsZero() ||
-			lastRecord.IsUp {
-			payload, err = json.Marshal(result)
-		} else {
-			payload, err = json.Marshal(struct {
-				*config.CheckResults
-				DownTime string `json:"downtime"`
-			}{
-				result,
-				result.LastCheck.
-					Sub(lastUpRecord.LastCheck).
-					Round(time.Second).String(),
-			})
-		}
-	} else {
-		url += "/down"
-		payload, err = json.Marshal(result)
-	}
+// 		if lastUpRecord.LastCheck.IsZero() ||
+// 			lastRecord.LastCheck.IsZero() ||
+// 			lastRecord.IsUp {
+// 			payload, err = json.Marshal(result)
+// 		} else {
+// 			payload, err = json.Marshal(struct {
+// 				*config.Monitor
+// 				DownTime string `json:"downtime"`
+// 			}{
+// 				result,
+// 				result.LastCheck.
+// 					Sub(lastUpRecord.LastCheck).
+// 					Round(time.Second).String(),
+// 			})
+// 		}
+// 	} else {
+// 		url += "/down"
+// 		payload, err = json.Marshal(result)
+// 	}
 
-	if err != nil {
-		log.Printf("Error marshalling JSON for %s: %v", result.URL, err)
-		return
-	}
+// 	if err != nil {
+// 		log.Printf("Error marshalling JSON for %s: %v", result.URL, err)
+// 		return
+// 	}
 
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
-	if err != nil {
-		log.Printf("Error creating request for %s: %v", url, err)
-		return
-	}
+// 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+// 	if err != nil {
+// 		log.Printf("Error creating request for %s: %v", url, err)
+// 		return
+// 	}
 
-	request.Header.Set("Content-Type", "application/json")
+// 	request.Header.Set("Content-Type", "application/json")
 
-	response, err := client.Do(request)
-	if err != nil {
-		log.Printf("error while doing request to %s: %v", url, err)
-		return
-	}
+// 	response, err := client.Do(request)
+// 	if err != nil {
+// 		log.Printf("error while doing request to %s: %v", url, err)
+// 		return
+// 	}
 
-	defer response.Body.Close()
-}
+// 	defer response.Body.Close()
+// }
