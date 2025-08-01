@@ -16,13 +16,13 @@ import (
 
 // UptimeMonitor represents a service that periodically checks website uptime
 type UptimeMonitor struct {
-	configs  []*config.NetworkConfig
+	configs  []*config.Monitor
 	db       *database.Database
 	stopChan chan struct{}
 	wg       sync.WaitGroup
 }
 
-func NewUptimeMonitor(db *database.Database, configs []*config.NetworkConfig) (*UptimeMonitor, error) {
+func NewUptimeMonitor(db *database.Database, configs []*config.Monitor) (*UptimeMonitor, error) {
 	return &UptimeMonitor{
 		configs:  configs,
 		db:       db,
@@ -58,10 +58,10 @@ func (m *UptimeMonitor) Stop() {
 	fmt.Println("Monitoring stopped")
 }
 
-func (m *UptimeMonitor) monitorWebsite(cfg *config.NetworkConfig) {
+func (m *UptimeMonitor) monitorWebsite(cfg *config.Monitor) {
 	defer m.wg.Done()
 
-	ticker := time.NewTicker(cfg.RefreshInterval)
+	ticker := time.NewTicker(cfg.Interval)
 	defer ticker.Stop()
 
 	// Perform initial check immediately
@@ -77,12 +77,12 @@ func (m *UptimeMonitor) monitorWebsite(cfg *config.NetworkConfig) {
 	}
 }
 
-func (m *UptimeMonitor) checkWebsite(cfg *config.NetworkConfig) {
+func (m *UptimeMonitor) checkWebsite(cfg *config.Monitor) {
 	netConfig := &net.NetworkConfig{
-		URL:             cfg.URL,
-		Timeout:         cfg.Timeout,
-		FollowRedirects: cfg.FollowRedirects,
-		SkipSSL:         cfg.SkipSSL,
+		URL:     cfg.URL,
+		Timeout: cfg.ResponseTimeThreshold,
+		// FollowRedirects: cfg.FollowRedirects,
+		SkipSSL: cfg.SSLMonitoring,
 	}
 
 	// result

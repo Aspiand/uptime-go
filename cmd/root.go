@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"uptime-go/internal/configuration"
 	"uptime-go/internal/monitor"
@@ -66,38 +65,17 @@ func runMonitorMode() {
 		os.Exit(ExitErrorConfig)
 	}
 
-	config, err := configReader.ParseConfig()
-	if err != nil {
-		fmt.Printf("Error while parsing config: %w", err)
-	}
-
-	for _, c := range config {
-
-		fmt.Printf("\n--- Website  ---\n")
-		fmt.Printf("ID: %s\n", c.ID)
-		fmt.Printf("URL: %s\n", c.URL)
-		fmt.Printf("Enabled: %t\n", c.Enabled)
-		fmt.Printf("Interval: %d\n", c.Interval)
-		fmt.Printf("SSL Monitoring: %t\n", c.SSLMonitoring)
-		fmt.Printf("SSL Expired Before: %d\n", c.SSLExpiredBefore)
-		fmt.Printf("Response Time Threshold: %d\n", c.ResponseTimeThreshold)
-		fmt.Printf("Created At: %s\n", c.CreatedAt.Format(time.RFC3339))
-		fmt.Printf("Updated At: %s\n", c.UpdatedAt.Format(time.RFC3339))
-	}
-
-	return
-
 	// Get uptime configuration
-	uptimeConfigs, err := configReader.GetUptimeConfig()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing configuration: %v\n", err)
-		os.Exit(ExitErrorConfig)
-	}
+	// uptimeConfigs, err := configReader.GetUptimeConfig()
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "Error parsing configuration: %v\n", err)
+	// 	os.Exit(ExitErrorConfig)
+	// }
 
-	if len(uptimeConfigs) == 0 {
-		fmt.Fprintln(os.Stderr, "No valid website configurations found in config file")
-		os.Exit(ExitErrorConfig)
-	}
+	// if len(uptimeConfigs) == 0 {
+	// 	fmt.Fprintln(os.Stderr, "No valid website configurations found in config file")
+	// 	os.Exit(ExitErrorConfig)
+	// }
 
 	// TODO: idk
 	// // Get domains from agent config
@@ -122,12 +100,29 @@ func runMonitorMode() {
 	// 	})
 	// }
 
+	// Get uptime configuration
+	uptimeConfigs, err := configReader.ParseConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing configuration: %v\n", err)
+		os.Exit(ExitErrorConfig)
+	}
+
+	if len(uptimeConfigs) == 0 {
+		fmt.Fprintln(os.Stderr, "No valid website configurations found in config file")
+		os.Exit(ExitErrorConfig)
+	}
+
 	// Initialize database
 	db, err := database.InitializeDatabase()
 	if err != nil {
-		fmt.Errorf("failed to initialize database: %w", err)
+		fmt.Printf("failed to initialize database: %v", err)
 		os.Exit(ExitErrorConnection)
 	}
+
+	// Save config to database
+	db.DB.Create(&uptimeConfigs)
+
+	return
 
 	// Initialize and start monitor
 	uptimeMonitor, err := monitor.NewUptimeMonitor(db, uptimeConfigs)

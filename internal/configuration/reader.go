@@ -3,6 +3,8 @@ package configuration
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"uptime-go/internal/net/config"
@@ -37,49 +39,90 @@ func (cr *ConfigReader) ReadConfig(filePath string) error {
 	return nil
 }
 
-func (c *ConfigReader) ParseConfig() ([]*config.Monitor, error) {
-	var monitors []*config.Monitor
-
-	for domain, v := range c.viper.AllSettings() {
-		monitor, ok := v.(map[string]any)
-		if !ok {
-			continue
-		}
-
-		config := &config.Monitor{
-			ID:  config.GenerateRandomID(),
-			URL: domain,
-		}
-
-		if enabled, ok := monitor["enabled"].(bool); ok {
-			config.Enabled = enabled
-		}
-
-		if interval, ok := monitor["interval"].(uint); ok {
-			// TODO: parse
-			config.Interval = interval
-		}
-
-		if sslMonitoring, ok := monitor["ssl_monitoring"].(bool); ok {
-			config.SSLMonitoring = sslMonitoring
-		}
-
-		if sslExpiredBefore, ok := monitor["ssl_expired_before"].(uint); ok {
-			// TODO: parse
-			config.SSLExpiredBefore = sslExpiredBefore
-		}
-
-		monitors = append(monitors, config)
-	}
-
-	return monitors, nil
-}
-
 func (c *ConfigReader) setDefaults() {
 	c.viper.SetDefault("timeout", "5s")
 	c.viper.SetDefault("refresh_interval", "10")
 	c.viper.SetDefault("follow_redirects", true)
 	c.viper.SetDefault("skip_ssl", false)
+}
+
+func (c *ConfigReader) ParseConfig() ([]*config.Monitor, error) {
+	// TODO: optimize code
+
+	var configList []*config.Monitor
+
+	// Get the monitor configurations
+	monitors := c.viper.Get("monitor")
+	monitorsList, ok := monitors.([]any)
+	if !ok {
+		return nil, fmt.Errorf("invalid monitor configuration format")
+	}
+
+	for _, m := range monitorsList {
+		monitor, ok := m.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		config := &config.Monitor{
+			ID: config.GenerateRandomID(),
+		}
+
+		// Get URL
+		if url, ok := monitor["url"].(string); ok {
+			config.URL = url
+		}
+
+		// Get enabled
+		if enabled, ok := monitor["enabled"].(bool); ok {
+			config.Enabled = enabled
+		}
+
+		// Get refresh interval
+		if refreshInterval, ok := monitor["interval"].(string); ok {
+			interval, err := ParseDuration(refreshInterval)
+			if err != nil {
+				fmt.Printf("%s > failed to parse %s", config.URL, refreshInterval)
+			} else {
+				config.Interval = interval
+			}
+		} else {
+			config.Interval = 60 * time.Second // Default refresh interval
+		}
+
+		// Get timeout
+		if timeout, ok := monitor["response_time_threshold"].(string); ok {
+			t, err := ParseDuration(timeout)
+			if err != nil {
+				fmt.Printf("%s > failed to parse %s", config.URL, timeout)
+			} else {
+				config.ResponseTimeThreshold = t
+			}
+		} else {
+			config.ResponseTimeThreshold = 5 * time.Second // Default timeout
+		}
+
+		// Get skip SSL verification
+		if skipSSL, ok := monitor["ssl_monitoring"].(bool); ok {
+			config.SSLMonitoring = skipSSL
+		} else {
+			config.SSLMonitoring = false // Default skip SSL
+		}
+
+		// Get SSL expired before
+		if sslExpired, ok := monitor["ssl_expired_before"].(string); ok {
+			expired, err := ParseDuration(sslExpired)
+			if err != nil {
+				fmt.Printf("%s > failed to parse %s", config.URL, sslExpired)
+			} else {
+				config.SSLExpiredBefore = expired
+			}
+		}
+
+		configList = append(configList, config)
+	}
+
+	return configList, nil
 }
 
 func (c *ConfigReader) GetUptimeConfig() ([]*config.NetworkConfig, error) {
@@ -167,4 +210,30 @@ func (c *ConfigReader) GetDomains(path string) ([]string, error) {
 	}
 
 	return domains, nil
+}
+
+func ParseDuration(input string) (time.Duration, error) {
+	re := regexp.MustCompile(`(\d+)([smhd])`)
+	matches := re.FindAllStringSubmatch(input, -1)
+
+	var total time.Duration
+	for _, match := range matches {
+		value, _ := strconv.Atoi(match[1])
+		unit := match[2]
+
+		switch unit {
+		case "s":
+			total += time.Duration(value) * time.Second
+		case "m":
+			total += time.Duration(value) * time.Minute
+		case "h":
+			total += time.Duration(value) * time.Hour
+		case "d":
+			total += time.Duration(value) * 24 * time.Hour
+		default:
+			return 0, fmt.Errorf("unknown unit: %s", unit)
+		}
+	}
+
+	return total, nil
 }

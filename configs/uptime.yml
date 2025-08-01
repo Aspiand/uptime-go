@@ -1,6 +1,13 @@
 monitor:
-  - url: "http://example.com"
-    refresh_interval: 60
-    timeout: 5
+  - url: "localhost:8080"
+    refresh_interval: 30
+    interval: 10s
     follow_redirects: true
     skip_ssl_verification: false
+
+  - url: "openjournaltheme.com"
+    enabled: yes
+    interval: 15s
+    response_time_threshold: 5s
+    ssl_monitoring: yes
+    ssl_expired_before: 7d

@@ -9,6 +9,7 @@ import (
 // TODO:
 // - change const to change to string?
 // - change SSLExpiredBefore to time.Time?
+// - move monitor to net
 
 const (
 	Timeout = iota
@@ -25,17 +26,17 @@ type NetworkConfig struct {
 }
 
 type Monitor struct {
-	ID                    string    `json:"id" gorm:"primaryKey"`
-	URL                   string    `json:"url" gorm:"unique"`
-	Enabled               bool      `json:"enabled"`
-	Interval              uint      `json:"-"`              // can be second/minutes/hour (s/m/h)
-	SSLMonitoring         bool      `json:"ssl_monitoring"` // enable ssl monitoring
-	SSLExpiredBefore      uint      `json:"-"`              // can be day/month/year (d/m/y)
-	ResponseTimeThreshold uint      `json:"-"`              // can be second/minutes (s/m)
-	IsUp                  *bool     `json:"is_up"`          // duplicate entry (requested)
-	StatusCode            *uint     `json:"status_code"`    // duplicate entry (requested)
-	CreatedAt             time.Time `json:"created_at"`
-	UpdatedAt             time.Time `json:"updated_at"`
+	ID                    string        `json:"id" gorm:"primaryKey"`
+	URL                   string        `json:"url" gorm:"unique"`
+	Enabled               bool          `json:"enabled"`
+	Interval              time.Duration `json:"-"`              // can be second/minutes/hour (s/m/h)
+	SSLMonitoring         bool          `json:"ssl_monitoring"` // enable ssl monitoring
+	SSLExpiredBefore      time.Duration `json:"-"`              // can be day/month/year (d/m/y)
+	ResponseTimeThreshold time.Duration `json:"-"`              // can be second/minutes (s/m)
+	IsUp                  *bool         `json:"is_up"`          // duplicate entry (requested)
+	StatusCode            *uint         `json:"status_code"`    // duplicate entry (requested)
+	CreatedAt             time.Time     `json:"created_at"`
+	UpdatedAt             time.Time     `json:"updated_at"`
 }
 
 type MonitorHistory struct {
