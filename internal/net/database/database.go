@@ -1,13 +1,12 @@
 package database
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"sync"
 	"time"
 
+	"uptime-go/internal/configuration"
 	"uptime-go/internal/net/config"
 
 	"github.com/glebarez/sqlite"
@@ -15,16 +14,14 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-const (
-	DBPath = "/var/uptime-go/db/uptime.db"
-)
-
 type Database struct {
 	DB    *gorm.DB
 	mutex sync.RWMutex
 }
 
-func InitializeDatabase() (*gorm.DB, error) {
+func InitializeDatabase() (*Database, error) {
+	DBPath := configuration.DBFile
+
 	// Create the directory if it doesn't exist
 	if err := os.MkdirAll("/var/uptime-go/db", 0755); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %w", err)
@@ -73,17 +70,18 @@ func InitializeDatabase() (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to migrate database schema: %w", err)
 	}
 
-	return db, nil
+	return &Database{DB: db}, nil
 }
 
-func (db *Database) UpsertRecord(record any) error {
+func (db *Database) UpsertRecord(record any, column string) error {
+	// Create record if not exists else update
+
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
-		// Create record if not exists else update
 		if err := tx.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "url"}},
+			Columns:   []clause.Column{{Name: column}},
 			UpdateAll: true,
 		}).Create(record).Error; err != nil {
 			return fmt.Errorf("failed to save record: %w", err)
@@ -111,14 +109,4 @@ func (db *Database) GetMonitorRecord(url string) *config.Monitor {
 	}
 
 	return &record
-}
-
-func generateRandomID(n int) string {
-	b := make([]byte, n)
-	rand.Read(b)
-	return hex.EncodeToString(b)
-}
-
-func GenerateRandomID() string {
-	return generateRandomID(4)
 }

@@ -22,16 +22,10 @@ type UptimeMonitor struct {
 	wg       sync.WaitGroup
 }
 
-func NewUptimeMonitor(configs []*config.NetworkConfig) (*UptimeMonitor, error) {
-	// Initialize database
-	db, err := database.InitializeDatabase()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize database: %w", err)
-	}
-
+func NewUptimeMonitor(db *database.Database, configs []*config.NetworkConfig) (*UptimeMonitor, error) {
 	return &UptimeMonitor{
 		configs:  configs,
-		db:       &database.Database{DB: db},
+		db:       db,
 		stopChan: make(chan struct{}),
 	}, nil
 }
@@ -91,24 +85,25 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.NetworkConfig) {
 		SkipSSL:         cfg.SkipSSL,
 	}
 
-	result, err := netConfig.CheckWebsite()
+	// result
+	_, err := netConfig.CheckWebsite()
 	if err != nil {
 		log.Printf("Error checking %s: %v", cfg.URL, err)
 		// Create a failed check result
-		result = &config.Monitor{
-			ID:           database.GenerateRandomID(),
-			URL:          cfg.URL,
-			LastCheck:    time.Now(),
-			ResponseTime: 0,
-			IsUp:         false,
-			StatusCode:   0,
-			ErrorMessage: err.Error(),
-			// TODO: add ssl expirate date
-		}
+		// result = &config.Monitor{
+		// 	ID:           database.GenerateRandomID(),
+		// 	URL:          cfg.URL,
+		// 	LastCheck:    time.Now(),
+		// 	ResponseTime: 0,
+		// 	IsUp:         false,
+		// 	StatusCode:   0,
+		// 	ErrorMessage: err.Error(),
+		// 	// TODO: add ssl expirate date
+		// }
 
-		if os.IsTimeout(err) {
-			result.ResponseTime = int64(cfg.Timeout)
-		}
+		// if os.IsTimeout(err) {
+		// 	result.ResponseTime = int64(cfg.Timeout)
+		// }
 	}
 
 	// lastRecord :=
@@ -118,32 +113,32 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.NetworkConfig) {
 	// Log the result
 	// statusText := "UP"
 
-	if !result.IsUp {
-		// statusText = "DOWN"
-		m.db.SaveRecord(&config.Incident{
-			ID:              database.GenerateRandomID(),
-			URL:             result.URL,
-			Body:            result.ErrorMessage,
-			StatusCode:      result.StatusCode,
-			ResponseTime:    result.ResponseTime,
-			SSLExpirateDate: result.SSLExpirateDate,
-		})
-	}
+	// if !result.IsUp {
+	// 	statusText = "DOWN"
+	// 	m.db.SaveRecord(&config.Incident{
+	// 		ID:              database.GenerateRandomID(),
+	// 		URL:             result.URL,
+	// 		Body:            result.ErrorMessage,
+	// 		StatusCode:      result.StatusCode,
+	// 		ResponseTime:    result.ResponseTime,
+	// 		SSLExpirateDate: result.SSLExpirateDate,
+	// 	})
+	// }
 
 	// log.Printf("%s - %s - Response time: %v - Status: %d",
 	// 	cfg.URL, statusText, result.ResponseTime, result.StatusCode)
 
 	// Save result to database
 
-	if err := m.db.UpsertRecord(result); err != nil {
-		log.Printf("Failed to save result to database: %v", err)
-	}
+	// if err := m.db.UpsertRecord(result); err != nil {
+	// 	log.Printf("Failed to save result to database: %v", err)
+	// }
 
-	if err := m.db.SaveRecord(&config.MonitorHistory{
-		ID:           database.GenerateRandomID(),
-		URL:          result.URL,
-		ResponseTime: result.ResponseTime,
-	}); err != nil {
-		log.Printf("Failed to save history to database: %v", err)
-	}
+	// if err := m.db.SaveRecord(&config.MonitorHistory{
+	// 	ID:           database.GenerateRandomID(),
+	// 	URL:          result.URL,
+	// 	ResponseTime: result.ResponseTime,
+	// }); err != nil {
+	// 	log.Printf("Failed to save history to database: %v", err)
+	// }
 }

@@ -11,7 +11,7 @@ import (
 
 	"uptime-go/internal/configuration"
 	"uptime-go/internal/monitor"
-	"uptime-go/internal/net/config"
+	"uptime-go/internal/net/database"
 
 	"github.com/spf13/cobra"
 )
@@ -28,8 +28,6 @@ const (
 	ExitErrorInvalidArgs = 1
 	ExitErrorConnection  = 2
 	ExitErrorConfig      = 3
-
-	ConfigPath = "/var/uptime-go/etc/uptime.yml" // Default config file path
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -49,7 +47,7 @@ Usage: uptime-go [--config=path/to/uptime.yaml]`,
 // runMonitorMode reads the configuration file and starts continuous monitoring
 func runMonitorMode() {
 	if Config.ConfigFile == "" {
-		Config.ConfigFile = ConfigPath
+		Config.ConfigFile = configuration.ConfigFile
 	}
 
 	// Ensure config file is absolute
@@ -63,11 +61,31 @@ func runMonitorMode() {
 	// Read configuration
 	fmt.Printf("Loading configuration from %s\n", Config.ConfigFile)
 	configReader := configuration.NewConfigReader()
-	err := configReader.ReadConfig(Config.ConfigFile)
-	if err != nil {
+	if err := configReader.ReadConfig(Config.ConfigFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading configuration: %v\n", err)
 		os.Exit(ExitErrorConfig)
 	}
+
+	config, err := configReader.ParseConfig()
+	if err != nil {
+		fmt.Printf("Error while parsing config: %w", err)
+	}
+
+	for _, c := range config {
+
+		fmt.Printf("\n--- Website  ---\n")
+		fmt.Printf("ID: %s\n", c.ID)
+		fmt.Printf("URL: %s\n", c.URL)
+		fmt.Printf("Enabled: %t\n", c.Enabled)
+		fmt.Printf("Interval: %d\n", c.Interval)
+		fmt.Printf("SSL Monitoring: %t\n", c.SSLMonitoring)
+		fmt.Printf("SSL Expired Before: %d\n", c.SSLExpiredBefore)
+		fmt.Printf("Response Time Threshold: %d\n", c.ResponseTimeThreshold)
+		fmt.Printf("Created At: %s\n", c.CreatedAt.Format(time.RFC3339))
+		fmt.Printf("Updated At: %s\n", c.UpdatedAt.Format(time.RFC3339))
+	}
+
+	return
 
 	// Get uptime configuration
 	uptimeConfigs, err := configReader.GetUptimeConfig()
@@ -81,30 +99,38 @@ func runMonitorMode() {
 		os.Exit(ExitErrorConfig)
 	}
 
-	// Get domains from agent config
-	domains, err := configReader.GetDomains("/etc/ojtguardian/domains")
+	// TODO: idk
+	// // Get domains from agent config
+	// domains, err := configReader.GetDomains("/etc/ojtguardian/domains")
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "Error getting domain on agent config: %v\n", err)
+	// 	os.Exit(ExitErrorConfig)
+	// }
+
+	// if len(domains) == 0 {
+	// 	fmt.Fprintln(os.Stderr, "No valid website configurations found in config file")
+	// 	os.Exit(ExitErrorConfig)
+	// }
+
+	// for _, d := range domains {
+	// 	uptimeConfigs = append(uptimeConfigs, &config.NetworkConfig{
+	// 		URL:             d,
+	// 		RefreshInterval: 1 * time.Minute,
+	// 		Timeout:         10 * time.Second,
+	// 		FollowRedirects: true,
+	// 		SkipSSL:         true,
+	// 	})
+	// }
+
+	// Initialize database
+	db, err := database.InitializeDatabase()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting domain on agent config: %v\n", err)
-		os.Exit(ExitErrorConfig)
-	}
-
-	if len(domains) == 0 {
-		fmt.Fprintln(os.Stderr, "No valid website configurations found in config file")
-		os.Exit(ExitErrorConfig)
-	}
-
-	for _, d := range domains {
-		uptimeConfigs = append(uptimeConfigs, &config.NetworkConfig{
-			URL:             d,
-			RefreshInterval: 1 * time.Minute,
-			Timeout:         10 * time.Second,
-			FollowRedirects: true,
-			SkipSSL:         true,
-		})
+		fmt.Errorf("failed to initialize database: %w", err)
+		os.Exit(ExitErrorConnection)
 	}
 
 	// Initialize and start monitor
-	uptimeMonitor, err := monitor.NewUptimeMonitor(uptimeConfigs)
+	uptimeMonitor, err := monitor.NewUptimeMonitor(db, uptimeConfigs)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error initializing monitor: %v\n", err)
 		os.Exit(ExitErrorConfig)

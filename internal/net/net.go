@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"time"
 	"uptime-go/internal/net/config"
-	"uptime-go/internal/net/database"
 )
 
 type NetworkConfig struct {
@@ -39,7 +38,7 @@ func (nc *NetworkConfig) CheckWebsite() (*config.Monitor, error) {
 		return nil, err
 	}
 
-	start := time.Now()
+	// start := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -50,18 +49,18 @@ func (nc *NetworkConfig) CheckWebsite() (*config.Monitor, error) {
 	// 	fmt.Printf("TLS: %v\n", resp.TLS.PeerCertificates[0].NotAfter.Format(time.RFC1123))
 	// }
 
-	responseTime := time.Since(start).Milliseconds()
-	success := resp.StatusCode >= 200 && resp.StatusCode < 300
-	isUp := success
+	// responseTime := time.Since(start).Milliseconds()
+	// success := resp.StatusCode >= 200 && resp.StatusCode < 300
+	// isUp := success
 
 	return &config.Monitor{
-		ID:           database.GenerateRandomID(),
-		URL:          nc.URL,
-		LastCheck:    time.Now(),
-		ResponseTime: responseTime,
-		IsUp:         isUp,
-		StatusCode:   resp.StatusCode,
-		ErrorMessage: "",
+		// ID:           database.GenerateRandomID(),
+		// URL:          nc.URL,
+		// LastCheck:    time.Now(),
+		// ResponseTime: responseTime,
+		// IsUp:         isUp,
+		// StatusCode:   resp.StatusCode,
+		// ErrorMessage: "",
 		// TODO: add ssl expirate date
 	}, nil
 }

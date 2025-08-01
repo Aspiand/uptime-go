@@ -37,6 +37,44 @@ func (cr *ConfigReader) ReadConfig(filePath string) error {
 	return nil
 }
 
+func (c *ConfigReader) ParseConfig() ([]*config.Monitor, error) {
+	var monitors []*config.Monitor
+
+	for domain, v := range c.viper.AllSettings() {
+		monitor, ok := v.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		config := &config.Monitor{
+			ID:  config.GenerateRandomID(),
+			URL: domain,
+		}
+
+		if enabled, ok := monitor["enabled"].(bool); ok {
+			config.Enabled = enabled
+		}
+
+		if interval, ok := monitor["interval"].(uint); ok {
+			// TODO: parse
+			config.Interval = interval
+		}
+
+		if sslMonitoring, ok := monitor["ssl_monitoring"].(bool); ok {
+			config.SSLMonitoring = sslMonitoring
+		}
+
+		if sslExpiredBefore, ok := monitor["ssl_expired_before"].(uint); ok {
+			// TODO: parse
+			config.SSLExpiredBefore = sslExpiredBefore
+		}
+
+		monitors = append(monitors, config)
+	}
+
+	return monitors, nil
+}
+
 func (c *ConfigReader) setDefaults() {
 	c.viper.SetDefault("timeout", "5s")
 	c.viper.SetDefault("refresh_interval", "10")

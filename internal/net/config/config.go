@@ -1,10 +1,15 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"time"
 )
 
-// TODO: change to string?
+// TODO:
+// - change const to change to string?
+// - change SSLExpiredBefore to time.Time?
+
 const (
 	Timeout = iota
 	SSLExpired
@@ -27,8 +32,8 @@ type Monitor struct {
 	SSLMonitoring         bool      `json:"ssl_monitoring"` // enable ssl monitoring
 	SSLExpiredBefore      uint      `json:"-"`              // can be day/month/year (d/m/y)
 	ResponseTimeThreshold uint      `json:"-"`              // can be second/minutes (s/m)
-	IsUp                  bool      `json:"is_up"`          // duplicate entry (requested)
-	StatusCode            uint      `json:"status_code"`    // duplicate entry (requested)
+	IsUp                  *bool     `json:"is_up"`          // duplicate entry (requested)
+	StatusCode            *uint     `json:"status_code"`    // duplicate entry (requested)
 	CreatedAt             time.Time `json:"created_at"`
 	UpdatedAt             time.Time `json:"updated_at"`
 }
@@ -52,3 +57,13 @@ type Incident struct {
 }
 
 // /etc/ojtguardian/plugins/uptime/config.yml
+
+func generateRandomID(n int) string {
+	b := make([]byte, n)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+func GenerateRandomID() string {
+	return generateRandomID(4)
+}
