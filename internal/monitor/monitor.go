@@ -10,19 +10,18 @@ import (
 	"time"
 
 	"uptime-go/internal/net"
-	"uptime-go/internal/net/config"
 	"uptime-go/internal/net/database"
 )
 
 // UptimeMonitor represents a service that periodically checks website uptime
 type UptimeMonitor struct {
-	configs  []*config.Monitor
+	configs  []*net.Monitor
 	db       *database.Database
 	stopChan chan struct{}
 	wg       sync.WaitGroup
 }
 
-func NewUptimeMonitor(db *database.Database, configs []*config.Monitor) (*UptimeMonitor, error) {
+func NewUptimeMonitor(db *database.Database, configs []*net.Monitor) (*UptimeMonitor, error) {
 	return &UptimeMonitor{
 		configs:  configs,
 		db:       db,
@@ -58,7 +57,7 @@ func (m *UptimeMonitor) Stop() {
 	fmt.Println("Monitoring stopped")
 }
 
-func (m *UptimeMonitor) monitorWebsite(cfg *config.Monitor) {
+func (m *UptimeMonitor) monitorWebsite(cfg *net.Monitor) {
 	defer m.wg.Done()
 
 	ticker := time.NewTicker(cfg.Interval)
@@ -77,7 +76,7 @@ func (m *UptimeMonitor) monitorWebsite(cfg *config.Monitor) {
 	}
 }
 
-func (m *UptimeMonitor) checkWebsite(cfg *config.Monitor) {
+func (m *UptimeMonitor) checkWebsite(cfg *net.Monitor) {
 	netConfig := &net.NetworkConfig{
 		URL:     cfg.URL,
 		Timeout: cfg.ResponseTimeThreshold,
@@ -90,7 +89,7 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.Monitor) {
 	if err != nil {
 		log.Printf("Error checking %s: %v", cfg.URL, err)
 		// Create a failed check result
-		// result = &config.Monitor{
+		// result = &net.Monitor{
 		// 	ID:           database.GenerateRandomID(),
 		// 	URL:          cfg.URL,
 		// 	LastCheck:    time.Now(),
@@ -134,7 +133,7 @@ func (m *UptimeMonitor) checkWebsite(cfg *config.Monitor) {
 	// 	log.Printf("Failed to save result to database: %v", err)
 	// }
 
-	// if err := m.db.SaveRecord(&config.MonitorHistory{
+	// if err := m.db.SaveRecord(&net.MonitorHistory{
 	// 	ID:           database.GenerateRandomID(),
 	// 	URL:          result.URL,
 	// 	ResponseTime: result.ResponseTime,

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"uptime-go/internal/configuration"
-	"uptime-go/internal/net/config"
+	"uptime-go/internal/net"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -63,16 +63,15 @@ func InitializeDatabase() (*Database, error) {
 
 	// Migrate the schema
 	if err := db.AutoMigrate(
-		&config.Monitor{},
-		&config.MonitorHistory{},
-		&config.Incident{},
+		&net.Monitor{},
+		&net.MonitorHistory{},
+		&net.Incident{},
 	); err != nil {
 		return nil, fmt.Errorf("failed to migrate database schema: %w", err)
 	}
 
 	return &Database{DB: db}, nil
 }
-
 func (db *Database) UpsertRecord(record any, column string) error {
 	// Create record if not exists else update
 
@@ -99,8 +98,8 @@ func (db *Database) SaveRecord(record any) error {
 	return nil
 }
 
-func (db *Database) GetMonitorRecord(url string) *config.Monitor {
-	var record config.Monitor
+func (db *Database) GetMonitorRecord(url string) *net.Monitor {
+	var record net.Monitor
 
 	if err := db.DB.
 		Where("url = ?", url).

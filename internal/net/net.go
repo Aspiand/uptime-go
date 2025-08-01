@@ -6,8 +6,40 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-	"uptime-go/internal/net/config"
 )
+
+type Monitor struct {
+	ID                    string           `json:"id" gorm:"primaryKey"`
+	URL                   string           `json:"url" gorm:"unique"`
+	Enabled               bool             `json:"enabled"`
+	Interval              time.Duration    `json:"-"`              // can be second/minutes/hour (s/m/h)
+	ResponseTimeThreshold time.Duration    `json:"-"`              // can be second/minutes (s/m)
+	SSLMonitoring         bool             `json:"ssl_monitoring"` // enable ssl monitoring
+	SSLExpiredBefore      *time.Duration   `json:"-"`              // can be day/month/year (d/m/y)
+	IsUp                  *bool            `json:"is_up"`          // duplicate entry (requested)
+	StatusCode            *uint            `json:"status_code"`    // duplicate entry (requested)
+	CreatedAt             time.Time        `json:"created_at"`
+	UpdatedAt             time.Time        `json:"updated_at"`
+	Histories             []MonitorHistory `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+}
+
+type MonitorHistory struct {
+	ID           string    `json:"id" gorm:"primaryKey"`
+	MonitorID    string    `json:"-"`
+	IsUp         bool      `json:"is_up" gorm:"index"`
+	StatusCode   uint      `json:"status_code"`
+	ResponseTime int64     `json:"response_time"` // in milliseconds
+	CreatedAt    time.Time `json:"created_at" gorm:"index"`
+}
+
+type Incident struct {
+	ID          string     `json:"id" gorm:"primaryKey"`
+	MonitorID   string     `json:"monitor_id"`
+	Type        uint       `json:"type"`
+	Description string     `json:"description"`
+	CreatedAt   time.Time  `json:"created_at"`
+	SolvedAt    *time.Time `json:"solved_at" gorm:"index"`
+}
 
 type NetworkConfig struct {
 	URL             string
@@ -27,7 +59,7 @@ func (nc *NetworkConfig) CheckWebsite() (*config.Monitor, error) {
 	}
 
 	// TODO: later
-	// if !nc.FollowRedirects {
+	// if true {
 	// 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 	// 		return http.ErrUseLastResponse
 	// 	}
@@ -53,7 +85,7 @@ func (nc *NetworkConfig) CheckWebsite() (*config.Monitor, error) {
 	// success := resp.StatusCode >= 200 && resp.StatusCode < 300
 	// isUp := success
 
-	return &config.Monitor{
+	return &Monitor{
 		// ID:           database.GenerateRandomID(),
 		// URL:          nc.URL,
 		// LastCheck:    time.Now(),
