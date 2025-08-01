@@ -4,8 +4,11 @@ import (
 	"time"
 )
 
+// TODO: change to string?
 const (
-	UP = iota
+	Timeout = iota
+	SSLExpired
+	StatusCode
 )
 
 type NetworkConfig struct {
@@ -16,32 +19,36 @@ type NetworkConfig struct {
 	SkipSSL         bool          // Whether to skip SSL certificate verification
 }
 
-// TODO: move status_code, error_message/body, ssl_expirate_date to Status struct.
-
 type Monitor struct {
-	ID        string    `json:"id" gorm:"primaryKey"`
-	URL       string    `json:"url" gorm:"unique"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	// LastCheck time.Time `json:"last_check" gorm:"index"`
+	ID                    string    `json:"id" gorm:"primaryKey"`
+	URL                   string    `json:"url" gorm:"unique"`
+	Enabled               bool      `json:"enabled"`
+	Interval              uint      `json:"-"`              // can be second/minutes/hour (s/m/h)
+	SSLMonitoring         bool      `json:"ssl_monitoring"` // enable ssl monitoring
+	SSLExpiredBefore      uint      `json:"-"`              // can be day/month/year (d/m/y)
+	ResponseTimeThreshold uint      `json:"-"`              // can be second/minutes (s/m)
+	IsUp                  bool      `json:"is_up"`          // duplicate entry (requested)
+	StatusCode            uint      `json:"status_code"`    // duplicate entry (requested)
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
 }
 
 type MonitorHistory struct {
 	ID           string    `json:"id" gorm:"primaryKey"`
-	URL          string    `json:"url"`
+	MonitorID    string    `json:"-"`
 	IsUp         bool      `json:"is_up" gorm:"index"`
-	ResponseTime int64     `json:"response_time"` // milliseconds
+	StatusCode   uint      `json:"status_code"`
+	ResponseTime int64     `json:"response_time"` // in milliseconds
 	CreatedAt    time.Time `json:"created_at" gorm:"index"`
 }
 
 type Incident struct {
-	ID              string `gorm:"primaryKey"`
-	URL             string `gorm:"index"`
-	Body            string
-	StatusCode      int
-	ResponseTime    int64
-	SSLExpirateDate time.Time
-	CreatedAt       time.Time `gorm:"index"`
+	ID          string     `json:"id" gorm:"primaryKey"`
+	MonitorID   string     `json:"monitor_id"`
+	Type        uint       `json:"type"`
+	Description string     `json:"description"`
+	CreatedAt   time.Time  `json:"created_at"`
+	SolvedAt    *time.Time `json:"solved_at" gorm:"index"`
 }
 
 // /etc/ojtguardian/plugins/uptime/config.yml

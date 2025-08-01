@@ -27,11 +27,12 @@ func (nc *NetworkConfig) CheckWebsite() (*config.Monitor, error) {
 		},
 	}
 
-	if !nc.FollowRedirects {
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		}
-	}
+	// TODO: later
+	// if !nc.FollowRedirects {
+	// 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+	// 		return http.ErrUseLastResponse
+	// 	}
+	// }
 
 	req, err := http.NewRequest(http.MethodGet, nc.URL, nil)
 	if err != nil {
