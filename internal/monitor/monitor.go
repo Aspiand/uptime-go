@@ -81,7 +81,6 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 	result, err := monitor.ToNetworkConfig().CheckWebsite()
 	if err != nil {
 		log.Printf("Error checking %s: %v", monitor.URL, err)
-		// TODO: handle
 		// Create a failed check result
 		result = &net.CheckResults{
 			URL:          monitor.URL,
@@ -93,7 +92,11 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 		}
 	}
 
+	statusText := "UP"
+
 	if err != nil || !result.IsUp {
+		statusText = "DOWN"
+
 		incident := config.Incident{
 			ID:          config.GenerateRandomID(),
 			MonitorID:   monitor.ID,
@@ -101,25 +104,30 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 		}
 
 		if !result.IsUp {
-			incident.Type = config.StatusCode
+			incident.Type = config.UnexpectedStatusCode
 		} else if os.IsTimeout(err) {
 			result.ResponseTime = monitor.ResponseTimeThreshold
 			incident.Type = config.Timeout
-		}
+		} // TODO: ssl expired
 
-		var lastIncident config.Incident
-		m.db.DB.
-			Joins("Monitor").
-			Where("Monitor.url = ? AND incidents.type = ? AND incidents.solved_at IS NULL", monitor.URL, incident.Type).
-			Find(&lastIncident)
+		lastIncident := m.db.GetLastIncident(monitor.URL, incident.Type)
 		if lastIncident.CreatedAt.IsZero() {
-			fmt.Println("New Incident detected!!") // TODO: improve message
+			log.Printf("%s - New Incident detected! - Status Code: %s", monitor.URL, incident.Type.String()) // TODO: improve message
 			m.db.DB.Create(&incident)
+		}
+	} else {
+		now := time.Now()
+
+		// Mark incident with unexpected status code or timeout to solved
+		lastIncident := m.db.GetLastIncident(monitor.URL, config.UnexpectedStatusCode)
+		if !lastIncident.CreatedAt.IsZero() {
+			lastIncident.SolvedAt = &now
+			m.db.UpsertRecord(lastIncident, "id")
+			log.Printf("%s - Incident Solved - Downtime %s\n", monitor.URL, time.Since(lastIncident.CreatedAt))
 		}
 	}
 
-	return
-
+	monitor.UpdatedAt = result.LastCheck
 	monitor.IsUp = &result.IsUp
 	monitor.StatusCode = &result.StatusCode
 	monitor.Histories = []config.MonitorHistory{
@@ -133,15 +141,7 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 
 	// TODO: handle ssl
 
-	m.db.UpsertRecord(monitor, "id")
-
 	// TODO: hook
-
-	statusText := "UP"
-
-	if !result.IsUp {
-		statusText = "DOWN"
-	}
 
 	// Log the result
 	log.Printf("%s - %s - Response time: %v - Status: %d",
@@ -149,15 +149,7 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 
 	// Save result to database
 
-	// if err := m.db.UpsertRecord(result); err != nil {
-	// 	log.Printf("Failed to save result to database: %v", err)
-	// }
-
-	// if err := m.db.SaveRecord(&net.MonitorHistory{
-	// 	ID:           database.GenerateRandomID(),
-	// 	URL:          result.URL,
-	// 	ResponseTime: result.ResponseTime,
-	// }); err != nil {
-	// 	log.Printf("Failed to save history to database: %v", err)
-	// }
+	if err := m.db.UpsertRecord(monitor, "id"); err != nil {
+		log.Printf("Failed to save result to database: %v", err)
+	}
 }

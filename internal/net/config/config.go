@@ -8,14 +8,14 @@ import (
 )
 
 // TODO:
-// - change const to change to string?
 // - change SSLExpiredBefore to time.Time?
-// - move monitor to net
+
+type ErrorType int
 
 const (
-	Timeout = iota
+	UnexpectedStatusCode ErrorType = iota
 	SSLExpired
-	StatusCode
+	Timeout
 )
 
 type NetworkConfig struct {
@@ -55,11 +55,24 @@ type MonitorHistory struct {
 type Incident struct {
 	ID          string     `json:"id" gorm:"primaryKey"`
 	MonitorID   string     `json:"monitor_id"`
-	Type        uint       `json:"type"`
+	Type        ErrorType  `json:"type"`
 	Description string     `json:"description"`
 	CreatedAt   time.Time  `json:"created_at"`
 	SolvedAt    *time.Time `json:"solved_at" gorm:"index"`
 	Monitor     Monitor    `gorm:"foreignKey:MonitorID"`
+}
+
+func (e ErrorType) String() string {
+	switch e {
+	case Timeout:
+		return "Timeout occurred"
+	case SSLExpired:
+		return "SSL certificate expired"
+	case UnexpectedStatusCode:
+		return "Unexpected status code"
+	default:
+		return "Unknown error"
+	}
 }
 
 func (m *Monitor) ToNetworkConfig() *net.NetworkConfig {
