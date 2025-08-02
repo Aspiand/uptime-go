@@ -125,6 +125,23 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 			m.db.UpsertRecord(lastIncident, "id")
 			log.Printf("%s - Incident Solved - Downtime %s\n", monitor.URL, time.Since(lastIncident.CreatedAt))
 		}
+
+		lastSSLIncident := m.db.GetLastIncident(monitor.URL, config.SSLExpired)
+		if time.Until(*result.SSLExpiredDate) <= *monitor.SSLExpiredBefore {
+			if lastSSLIncident.CreatedAt.IsZero() {
+				log.Printf("%s - [%s] - Please update SSL", config.SSLExpired.String(), monitor.URL)
+				m.db.DB.Create(&config.Incident{
+					ID:          config.GenerateRandomID(),
+					MonitorID:   monitor.ID,
+					Description: fmt.Sprintf("SSL will be expired on %s", result.SSLExpiredDate),
+				})
+			}
+		} else {
+			if lastSSLIncident.SolvedAt.IsZero() {
+				lastSSLIncident.SolvedAt = &now
+				m.db.UpsertRecord(lastSSLIncident, "id")
+			}
+		}
 	}
 
 	monitor.UpdatedAt = result.LastCheck
@@ -138,8 +155,6 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 			ResponseTime: result.ResponseTime.Milliseconds(),
 		},
 	}
-
-	// TODO: handle ssl
 
 	// TODO: hook
 
