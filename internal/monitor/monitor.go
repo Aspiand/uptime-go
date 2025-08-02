@@ -45,6 +45,11 @@ func (m *UptimeMonitor) Start() {
 
 	// Start a goroutine for each website to monitor
 	for _, cfg := range m.configs {
+		if !cfg.Enabled {
+			log.Printf("%s - skipped because disabled\n", cfg.URL)
+			continue
+		}
+
 		m.wg.Add(1)
 		go m.monitorWebsite(cfg)
 	}
@@ -137,7 +142,8 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 				})
 			}
 		} else {
-			if lastSSLIncident.SolvedAt.IsZero() {
+			// if lastSSLIncident exists in database; mark solved
+			if !lastSSLIncident.CreatedAt.IsZero() {
 				lastSSLIncident.SolvedAt = &now
 				m.db.UpsertRecord(lastSSLIncident, "id")
 			}
