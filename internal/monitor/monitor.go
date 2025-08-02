@@ -90,22 +90,35 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 			IsUp:         false,
 			StatusCode:   0,
 			ErrorMessage: err.Error(),
-			// TODO: add ssl expirate date
 		}
-
-		// incident := config.Incident{
-		// 	ID:          config.GenerateRandomID(),
-		// 	MonitorID:   monitor.ID,
-		// 	Description: err.Error(),
-		// }
-
-		if os.IsTimeout(err) {
-			result.ResponseTime = monitor.ResponseTimeThreshold
-			// incident.Type = config.Timeout
-		}
-
-		// m.db.DB.Create(&incident)
 	}
+
+	if err != nil || !result.IsUp {
+		incident := config.Incident{
+			ID:          config.GenerateRandomID(),
+			MonitorID:   monitor.ID,
+			Description: err.Error(),
+		}
+
+		if !result.IsUp {
+			incident.Type = config.StatusCode
+		} else if os.IsTimeout(err) {
+			result.ResponseTime = monitor.ResponseTimeThreshold
+			incident.Type = config.Timeout
+		}
+
+		var lastIncident config.Incident
+		m.db.DB.
+			Joins("Monitor").
+			Where("Monitor.url = ? AND incidents.type = ? AND incidents.solved_at IS NULL", monitor.URL, incident.Type).
+			Find(&lastIncident)
+		if lastIncident.CreatedAt.IsZero() {
+			fmt.Println("New Incident detected!!") // TODO: improve message
+			m.db.DB.Create(&incident)
+		}
+	}
+
+	return
 
 	monitor.IsUp = &result.IsUp
 	monitor.StatusCode = &result.StatusCode
@@ -117,6 +130,9 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 			ResponseTime: result.ResponseTime.Milliseconds(),
 		},
 	}
+
+	// TODO: handle ssl
+
 	m.db.UpsertRecord(monitor, "id")
 
 	// TODO: hook
@@ -125,14 +141,6 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 
 	if !result.IsUp {
 		statusText = "DOWN"
-		// m.db.SaveRecord(&config.Incident{
-		// 	ID:              database.GenerateRandomID(),
-		// 	URL:             result.URL,
-		// 	Body:            result.ErrorMessage,
-		// 	StatusCode:      result.StatusCode,
-		// 	ResponseTime:    result.ResponseTime,
-		// 	SSLExpirateDate: result.SSLExpirateDate,
-		// })
 	}
 
 	// Log the result

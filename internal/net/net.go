@@ -17,12 +17,13 @@ type NetworkConfig struct {
 }
 
 type CheckResults struct {
-	URL          string
-	LastCheck    time.Time
-	ResponseTime time.Duration
-	IsUp         bool
-	StatusCode   int
-	ErrorMessage string
+	URL            string
+	LastCheck      time.Time
+	ResponseTime   time.Duration
+	IsUp           bool
+	StatusCode     int
+	ErrorMessage   string
+	SSLExpiredDate *time.Time
 }
 
 func (nc *NetworkConfig) CheckWebsite() (*CheckResults, error) {
@@ -53,22 +54,25 @@ func (nc *NetworkConfig) CheckWebsite() (*CheckResults, error) {
 	}
 	defer resp.Body.Close()
 
-	// if tls := resp.TLS; tls != nil {
-	// 	fmt.Printf("TLS: %v\n", resp.TLS.PeerCertificates[0].NotAfter.Format(time.RFC1123))
-	// }
-
 	responseTime := time.Since(start)
 	success := resp.StatusCode >= 200 && resp.StatusCode < 300
 	isUp := success
 
-	return &CheckResults{
+	result := &CheckResults{
 		URL:          nc.URL,
 		LastCheck:    time.Now(),
 		ResponseTime: responseTime,
 		IsUp:         isUp,
 		StatusCode:   resp.StatusCode,
 		ErrorMessage: "",
-	}, nil
+	}
+
+	if tls := resp.TLS; tls != nil {
+		result.SSLExpiredDate = &tls.PeerCertificates[0].NotAfter
+		// fmt.Printf("TLS: %v\n", resp.TLS.PeerCertificates[0].NotAfter.Format(time.RFC1123))
+	}
+
+	return result, nil
 }
 
 func isIPAddress(host string) bool {

@@ -49,6 +49,7 @@ type MonitorHistory struct {
 	StatusCode   int       `json:"status_code"`
 	ResponseTime int64     `json:"response_time"` // in milliseconds
 	CreatedAt    time.Time `json:"created_at" gorm:"index"`
+	Monitor      Monitor   `gorm:"foreignKey:MonitorID"`
 }
 
 type Incident struct {
@@ -58,6 +59,7 @@ type Incident struct {
 	Description string     `json:"description"`
 	CreatedAt   time.Time  `json:"created_at"`
 	SolvedAt    *time.Time `json:"solved_at" gorm:"index"`
+	Monitor     Monitor    `gorm:"foreignKey:MonitorID"`
 }
 
 func (m *Monitor) ToNetworkConfig() *net.NetworkConfig {
