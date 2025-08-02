@@ -1,4 +1,5 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from time import sleep
 import json
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -9,11 +10,17 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             print(f"Received POST request on {self.path} with body: {body.decode('utf-8')}")
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b'Request received')
+            self.wfile.write(b'Request received')            
         else:
             self.send_response(404)
             self.end_headers()
             self.wfile.write(b'Not Found')
+
+    def do_GET(self):
+        sleep(60)
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'Request received')
 
 def run(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler, port=8005):
     server_address = ('', port)
