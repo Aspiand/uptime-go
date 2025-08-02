@@ -131,6 +131,8 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 			log.Printf("%s - Incident Solved - Downtime %s\n", monitor.URL, time.Since(lastIncident.CreatedAt))
 		}
 
+		// TODO: timeout
+
 		lastSSLIncident := m.db.GetLastIncident(monitor.URL, config.SSLExpired)
 		if time.Until(*result.SSLExpiredDate) <= *monitor.SSLExpiredBefore {
 			if lastSSLIncident.CreatedAt.IsZero() {
