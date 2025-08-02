@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	"uptime-go/internal/configuration"
-	"uptime-go/internal/net"
 	"uptime-go/internal/net/config"
 	"uptime-go/internal/net/database"
 
@@ -120,31 +119,15 @@ func runMonitorMode() {
 		os.Exit(ExitErrorConnection)
 	}
 
-	// merge config; TODO: move to function
-	var urls []string
-	for _, c := range uptimeConfigs {
-		urls = append(urls, c.URL)
+	// Generate a temporary ID for the config.
+	// It will be replaced by the database ID if the record exists.
+	for _, r := range uptimeConfigs {
+		r.ID = config.GenerateRandomID()
 	}
 
-	var dbConfig []net.Monitor
-	db.DB.Where("url IN ?", urls).Find(&dbConfig)
-
-	if len(dbConfig) == 0 {
-		for _, record := range uptimeConfigs {
-			record.ID = config.GenerateRandomID()
-		}
-
-		// db.UpsertRecord(uptimeConfigs, "url")
-		db.DB.Create(uptimeConfigs)
-	} else {
-		// TODO: fix later
-		// record in database is not sync with config file
-		db.DB.Find(&uptimeConfigs)
-	}
-
-	for _, c := range uptimeConfigs {
-		fmt.Printf("%s: %s\n", c.ID, c.URL)
-	}
+	// Merge config
+	db.UpsertRecord(uptimeConfigs, "url")
+	db.DB.Find(&uptimeConfigs)
 
 	return
 
