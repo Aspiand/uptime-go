@@ -39,6 +39,7 @@ type Monitor struct {
 	CreatedAt             time.Time        `json:"created_at"`
 	UpdatedAt             time.Time        `json:"updated_at"`
 	Histories             []MonitorHistory `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Incidents             []Incident       `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 type MonitorHistory struct {

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"uptime-go/internal/configuration"
+	"uptime-go/internal/monitor"
 	"uptime-go/internal/net/config"
 	"uptime-go/internal/net/database"
 
@@ -133,13 +134,13 @@ func runMonitorMode() {
 	db.DB.Where("url IN ?", urls).Find(&uptimeConfigs)
 
 	// Initialize and start monitor
-	// uptimeMonitor, err := monitor.NewUptimeMonitor(db, uptimeConfigs)
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "Error initializing monitor: %v\n", err)
-	// 	os.Exit(ExitErrorConfig)
-	// }
+	uptimeMonitor, err := monitor.NewUptimeMonitor(db, uptimeConfigs)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing monitor: %v\n", err)
+		os.Exit(ExitErrorConfig)
+	}
 
-	// uptimeMonitor.Start()
+	uptimeMonitor.Start()
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

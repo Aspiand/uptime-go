@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"uptime-go/internal/net"
 	"uptime-go/internal/net/config"
 	"uptime-go/internal/net/database"
 )
@@ -76,49 +77,67 @@ func (m *UptimeMonitor) monitorWebsite(cfg *config.Monitor) {
 	}
 }
 
-func (m *UptimeMonitor) checkWebsite(cfg *config.Monitor) {
-	// result
-	_, err := cfg.ToNetworkConfig().CheckWebsite()
+func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
+	result, err := monitor.ToNetworkConfig().CheckWebsite()
 	if err != nil {
-		log.Printf("Error checking %s: %v", cfg.URL, err)
+		log.Printf("Error checking %s: %v", monitor.URL, err)
+		// TODO: handle
 		// Create a failed check result
-		// result = &config.Monitor{
-		// 	ID:           database.GenerateRandomID(),
-		// 	URL:          cfg.URL,
-		// 	LastCheck:    time.Now(),
-		// 	ResponseTime: 0,
-		// 	IsUp:         false,
-		// 	StatusCode:   0,
-		// 	ErrorMessage: err.Error(),
-		// 	// TODO: add ssl expirate date
+		result = &net.CheckResults{
+			URL:          monitor.URL,
+			LastCheck:    time.Now(),
+			ResponseTime: 0,
+			IsUp:         false,
+			StatusCode:   0,
+			ErrorMessage: err.Error(),
+			// TODO: add ssl expirate date
+		}
+
+		// incident := config.Incident{
+		// 	ID:          config.GenerateRandomID(),
+		// 	MonitorID:   monitor.ID,
+		// 	Description: err.Error(),
 		// }
 
-		// if os.IsTimeout(err) {
-		// 	result.ResponseTime = int64(cfg.Timeout)
-		// }
+		if os.IsTimeout(err) {
+			result.ResponseTime = monitor.ResponseTimeThreshold
+			// incident.Type = config.Timeout
+		}
+
+		// m.db.DB.Create(&incident)
 	}
 
-	// lastRecord :=
+	monitor.IsUp = &result.IsUp
+	monitor.StatusCode = &result.StatusCode
+	monitor.Histories = []config.MonitorHistory{
+		{
+			ID:           config.GenerateRandomID(),
+			IsUp:         result.IsUp,
+			StatusCode:   result.StatusCode,
+			ResponseTime: result.ResponseTime.Milliseconds(),
+		},
+	}
+	m.db.UpsertRecord(monitor, "id")
 
 	// TODO: hook
 
+	statusText := "UP"
+
+	if !result.IsUp {
+		statusText = "DOWN"
+		// m.db.SaveRecord(&config.Incident{
+		// 	ID:              database.GenerateRandomID(),
+		// 	URL:             result.URL,
+		// 	Body:            result.ErrorMessage,
+		// 	StatusCode:      result.StatusCode,
+		// 	ResponseTime:    result.ResponseTime,
+		// 	SSLExpirateDate: result.SSLExpirateDate,
+		// })
+	}
+
 	// Log the result
-	// statusText := "UP"
-
-	// if !result.IsUp {
-	// 	statusText = "DOWN"
-	// 	m.db.SaveRecord(&config.Incident{
-	// 		ID:              database.GenerateRandomID(),
-	// 		URL:             result.URL,
-	// 		Body:            result.ErrorMessage,
-	// 		StatusCode:      result.StatusCode,
-	// 		ResponseTime:    result.ResponseTime,
-	// 		SSLExpirateDate: result.SSLExpirateDate,
-	// 	})
-	// }
-
-	// log.Printf("%s - %s - Response time: %v - Status: %d",
-	// 	cfg.URL, statusText, result.ResponseTime, result.StatusCode)
+	log.Printf("%s - %s - Response time: %v - Status: %d",
+		monitor.URL, statusText, result.ResponseTime, result.StatusCode)
 
 	// Save result to database
 
