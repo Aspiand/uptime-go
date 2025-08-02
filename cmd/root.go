@@ -119,17 +119,18 @@ func runMonitorMode() {
 		os.Exit(ExitErrorConnection)
 	}
 
+	var urls []string
+
 	// Generate a temporary ID for the config.
 	// It will be replaced by the database ID if the record exists.
 	for _, r := range uptimeConfigs {
 		r.ID = config.GenerateRandomID()
+		urls = append(urls, r.URL)
 	}
 
 	// Merge config
 	db.UpsertRecord(uptimeConfigs, "url")
-	db.DB.Find(&uptimeConfigs)
-
-	return
+	db.DB.Where("url IN ?", urls).Find(&uptimeConfigs)
 
 	// Initialize and start monitor
 	// uptimeMonitor, err := monitor.NewUptimeMonitor(db, uptimeConfigs)
