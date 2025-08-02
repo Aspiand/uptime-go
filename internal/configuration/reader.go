@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"uptime-go/internal/net"
 	"uptime-go/internal/net/config"
 
 	"github.com/spf13/viper"
@@ -47,10 +46,10 @@ func (c *ConfigReader) setDefaults() {
 	c.viper.SetDefault("skip_ssl", false)
 }
 
-func (c *ConfigReader) ParseConfig() ([]*net.Monitor, error) {
+func (c *ConfigReader) ParseConfig() ([]*config.Monitor, error) {
 	// TODO: optimize code
 
-	var configList []*net.Monitor
+	var configList []*config.Monitor
 
 	// Get the monitor configurations
 	monitors := c.viper.Get("monitor")
@@ -65,7 +64,7 @@ func (c *ConfigReader) ParseConfig() ([]*net.Monitor, error) {
 			continue
 		}
 
-		config := &net.Monitor{
+		config := &config.Monitor{
 			// ID: config.GenerateRandomID(),
 		}
 

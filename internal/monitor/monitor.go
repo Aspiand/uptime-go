@@ -9,19 +9,19 @@ import (
 	"syscall"
 	"time"
 
-	"uptime-go/internal/net"
+	"uptime-go/internal/net/config"
 	"uptime-go/internal/net/database"
 )
 
 // UptimeMonitor represents a service that periodically checks website uptime
 type UptimeMonitor struct {
-	configs  []*net.Monitor
+	configs  []*config.Monitor
 	db       *database.Database
 	stopChan chan struct{}
 	wg       sync.WaitGroup
 }
 
-func NewUptimeMonitor(db *database.Database, configs []*net.Monitor) (*UptimeMonitor, error) {
+func NewUptimeMonitor(db *database.Database, configs []*config.Monitor) (*UptimeMonitor, error) {
 	return &UptimeMonitor{
 		configs:  configs,
 		db:       db,
@@ -57,7 +57,7 @@ func (m *UptimeMonitor) Stop() {
 	fmt.Println("Monitoring stopped")
 }
 
-func (m *UptimeMonitor) monitorWebsite(cfg *net.Monitor) {
+func (m *UptimeMonitor) monitorWebsite(cfg *config.Monitor) {
 	defer m.wg.Done()
 
 	ticker := time.NewTicker(cfg.Interval)
@@ -76,20 +76,13 @@ func (m *UptimeMonitor) monitorWebsite(cfg *net.Monitor) {
 	}
 }
 
-func (m *UptimeMonitor) checkWebsite(cfg *net.Monitor) {
-	netConfig := &net.NetworkConfig{
-		URL:     cfg.URL,
-		Timeout: cfg.ResponseTimeThreshold,
-		// FollowRedirects: cfg.FollowRedirects,
-		SkipSSL: cfg.SSLMonitoring,
-	}
-
+func (m *UptimeMonitor) checkWebsite(cfg *config.Monitor) {
 	// result
-	_, err := netConfig.CheckWebsite()
+	_, err := cfg.ToNetworkConfig().CheckWebsite()
 	if err != nil {
 		log.Printf("Error checking %s: %v", cfg.URL, err)
 		// Create a failed check result
-		// result = &net.Monitor{
+		// result = &config.Monitor{
 		// 	ID:           database.GenerateRandomID(),
 		// 	URL:          cfg.URL,
 		// 	LastCheck:    time.Now(),

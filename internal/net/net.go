@@ -8,39 +8,6 @@ import (
 	"time"
 )
 
-type Monitor struct {
-	ID                    string           `json:"id" gorm:"primaryKey"`
-	URL                   string           `json:"url" gorm:"unique"`
-	Enabled               bool             `json:"enabled"`
-	Interval              time.Duration    `json:"-"`              // can be second/minutes/hour (s/m/h)
-	ResponseTimeThreshold time.Duration    `json:"-"`              // can be second/minutes (s/m)
-	SSLMonitoring         bool             `json:"ssl_monitoring"` // enable ssl monitoring
-	SSLExpiredBefore      *time.Duration   `json:"-"`              // can be day/month/year (d/m/y)
-	IsUp                  *bool            `json:"is_up"`          // duplicate entry (requested)
-	StatusCode            *uint            `json:"status_code"`    // duplicate entry (requested)
-	CreatedAt             time.Time        `json:"created_at"`
-	UpdatedAt             time.Time        `json:"updated_at"`
-	Histories             []MonitorHistory `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-}
-
-type MonitorHistory struct {
-	ID           string    `json:"id" gorm:"primaryKey"`
-	MonitorID    string    `json:"-"`
-	IsUp         bool      `json:"is_up" gorm:"index"`
-	StatusCode   uint      `json:"status_code"`
-	ResponseTime int64     `json:"response_time"` // in milliseconds
-	CreatedAt    time.Time `json:"created_at" gorm:"index"`
-}
-
-type Incident struct {
-	ID          string     `json:"id" gorm:"primaryKey"`
-	MonitorID   string     `json:"monitor_id"`
-	Type        uint       `json:"type"`
-	Description string     `json:"description"`
-	CreatedAt   time.Time  `json:"created_at"`
-	SolvedAt    *time.Time `json:"solved_at" gorm:"index"`
-}
-
 type NetworkConfig struct {
 	URL             string
 	RefreshInterval time.Duration
@@ -49,7 +16,16 @@ type NetworkConfig struct {
 	SkipSSL         bool
 }
 
-func (nc *NetworkConfig) CheckWebsite() (*config.Monitor, error) {
+type CheckResults struct {
+	URL          string
+	LastCheck    time.Time
+	ResponseTime time.Duration
+	IsUp         bool
+	StatusCode   int
+	ErrorMessage string
+}
+
+func (nc *NetworkConfig) CheckWebsite() (*CheckResults, error) {
 	client := &http.Client{
 		Timeout: nc.Timeout,
 
@@ -59,7 +35,7 @@ func (nc *NetworkConfig) CheckWebsite() (*config.Monitor, error) {
 	}
 
 	// TODO: later
-	// if true {
+	// if !nc.FollowRedirects {
 	// 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 	// 		return http.ErrUseLastResponse
 	// 	}
@@ -70,7 +46,7 @@ func (nc *NetworkConfig) CheckWebsite() (*config.Monitor, error) {
 		return nil, err
 	}
 
-	// start := time.Now()
+	start := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -81,19 +57,17 @@ func (nc *NetworkConfig) CheckWebsite() (*config.Monitor, error) {
 	// 	fmt.Printf("TLS: %v\n", resp.TLS.PeerCertificates[0].NotAfter.Format(time.RFC1123))
 	// }
 
-	// responseTime := time.Since(start).Milliseconds()
-	// success := resp.StatusCode >= 200 && resp.StatusCode < 300
-	// isUp := success
+	responseTime := time.Since(start)
+	success := resp.StatusCode >= 200 && resp.StatusCode < 300
+	isUp := success
 
-	return &Monitor{
-		// ID:           database.GenerateRandomID(),
-		// URL:          nc.URL,
-		// LastCheck:    time.Now(),
-		// ResponseTime: responseTime,
-		// IsUp:         isUp,
-		// StatusCode:   resp.StatusCode,
-		// ErrorMessage: "",
-		// TODO: add ssl expirate date
+	return &CheckResults{
+		URL:          nc.URL,
+		LastCheck:    time.Now(),
+		ResponseTime: responseTime,
+		IsUp:         isUp,
+		StatusCode:   resp.StatusCode,
+		ErrorMessage: "",
 	}, nil
 }
 
@@ -107,7 +81,7 @@ func isIPAddress(host string) bool {
 	return net.ParseIP(hostname) != nil
 }
 
-// func NotifyHook(db *database.Database, result *config.Monitor) {
+// func NotifyHook(db *database.Database, result *config.config.Monitor) {
 // 	var payload []byte
 // 	var err error
 // 	url := "http://localhost:8005/uptime"
@@ -126,7 +100,7 @@ func isIPAddress(host string) bool {
 // 			payload, err = json.Marshal(result)
 // 		} else {
 // 			payload, err = json.Marshal(struct {
-// 				*config.Monitor
+// 				*config.config.Monitor
 // 				DownTime string `json:"downtime"`
 // 			}{
 // 				result,
