@@ -68,7 +68,7 @@ func (nc *NetworkConfig) CheckWebsite() (*CheckResults, error) {
 	}
 
 	if tls := resp.TLS; tls != nil &&
-		tls.PeerCertificates != nil ||
+		tls.PeerCertificates != nil &&
 		len(tls.PeerCertificates) == 0 {
 		result.SSLExpiredDate = &tls.PeerCertificates[0].NotAfter
 		// fmt.Printf("TLS: %v\n", time.Until(resp.TLS.PeerCertificates[0].NotAfter))
