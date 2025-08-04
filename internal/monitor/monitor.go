@@ -172,8 +172,6 @@ func (m *UptimeMonitor) resolveIncidents(monitor *config.Monitor, incidentTypes 
 }
 
 func (m *UptimeMonitor) handleSSL(monitor *config.Monitor, result *net.CheckResults) {
-	// TODO: test
-
 	now := time.Now()
 	lastSSLIncident := m.db.GetLastIncident(monitor.URL, config.SSLExpired)
 
@@ -189,7 +187,7 @@ func (m *UptimeMonitor) handleSSL(monitor *config.Monitor, result *net.CheckResu
 			Type:        config.SSLExpired,
 			Description: fmt.Sprintf("SSL will be expired on %s", result.SSLExpiredDate),
 		})
-	} else if !lastSSLIncident.CreatedAt.IsZero() {
+	} else if !isSSLExpiringSoon && !lastSSLIncident.CreatedAt.IsZero() {
 		lastSSLIncident.SolvedAt = &now
 		m.db.UpsertRecord(lastSSLIncident, "id")
 		log.Printf("%s - SSL Updated\n", monitor.URL)
