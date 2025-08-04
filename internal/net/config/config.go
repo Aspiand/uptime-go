@@ -30,12 +30,12 @@ type Monitor struct {
 	ID                    string           `json:"id" gorm:"primaryKey"`
 	URL                   string           `json:"url" gorm:"unique"`
 	Enabled               bool             `json:"enabled"`
-	Interval              time.Duration    `json:"-"`              // can be second/minutes/hour (s/m/h)
-	ResponseTimeThreshold time.Duration    `json:"-"`              // can be second/minutes (s/m)
+	Interval              time.Duration    `json:"-"`
+	ResponseTimeThreshold time.Duration    `json:"-"`
 	SSLMonitoring         bool             `json:"ssl_monitoring"` // enable ssl monitoring
-	SSLExpiredBefore      *time.Duration   `json:"-"`              // can be day/month/year (d/m/y)
-	IsUp                  *bool            `json:"is_up"`          // duplicate entry (requested)
-	StatusCode            *int             `json:"status_code"`    // duplicate entry (requested)
+	SSLExpiredBefore      *time.Duration   `json:"-"`
+	IsUp                  *bool            `json:"is_up"`       // duplicate entry (requested)
+	StatusCode            *int             `json:"status_code"` // duplicate entry (requested)
 	CreatedAt             time.Time        `json:"created_at"`
 	UpdatedAt             time.Time        `json:"updated_at"`
 	Histories             []MonitorHistory `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`

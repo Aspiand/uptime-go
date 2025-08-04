@@ -73,13 +73,6 @@ func runMonitorMode() {
 		os.Exit(ExitErrorConfig)
 	}
 
-	// Initialize database
-	db, err := database.InitializeDatabase()
-	if err != nil {
-		fmt.Printf("failed to initialize database: %v", err)
-		os.Exit(ExitErrorConnection)
-	}
-
 	var urls []string
 
 	// Generate a temporary ID for the config.
@@ -87,6 +80,13 @@ func runMonitorMode() {
 	for _, r := range uptimeConfigs {
 		r.ID = config.GenerateRandomID()
 		urls = append(urls, r.URL)
+	}
+
+	// Initialize database
+	db, err := database.InitializeDatabase()
+	if err != nil {
+		fmt.Printf("failed to initialize database: %v", err)
+		os.Exit(ExitErrorConnection)
 	}
 
 	// Merge config
