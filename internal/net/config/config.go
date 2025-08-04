@@ -55,7 +55,7 @@ type MonitorHistory struct {
 type Incident struct {
 	ID          string     `json:"id" gorm:"primaryKey"`
 	MonitorID   string     `json:"monitor_id"`
-	Type        ErrorType  `json:"type"`
+	Type        ErrorType  `json:"type" gorm:"index"`
 	Description string     `json:"description"`
 	CreatedAt   time.Time  `json:"created_at"`
 	SolvedAt    *time.Time `json:"solved_at" gorm:"index"`

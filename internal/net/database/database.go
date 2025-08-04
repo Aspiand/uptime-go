@@ -94,8 +94,10 @@ func (db *Database) GetLastIncident(url string, incidentType config.ErrorType) *
 	var incident config.Incident
 
 	db.DB.Joins("Monitor").
+		Select("incidents.*").
 		Where("Monitor.url = ? AND incidents.type = ? AND incidents.solved_at IS NULL", url, incidentType).
 		Order("incidents.created_at DESC").
+		Limit(1).
 		Find(&incident)
 
 	return &incident
