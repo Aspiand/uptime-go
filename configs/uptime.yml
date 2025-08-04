@@ -1,13 +1,9 @@
-monitor:
-  - url: "localhost:8080"
-    refresh_interval: 30
-    interval: 10s
-    follow_redirects: true
-    skip_ssl_verification: false
+# interval, response_time_threshold, ssl_expired_before: can be s(second)/m(minutes)/h(hour)/d(day)/M(month)
 
-  - url: "openjournaltheme.com"
-    enabled: yes
+monitor:
+  - url: "http://example.com"
+    enabled: true
     interval: 15s
     response_time_threshold: 5s
-    ssl_monitoring: yes
-    ssl_expired_before: 7d
+    ssl_monitoring: true
+    ssl_expired_before: 4M

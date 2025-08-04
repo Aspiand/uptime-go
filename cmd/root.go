@@ -67,49 +67,9 @@ func runMonitorMode() {
 	}
 
 	// Get uptime configuration
-	// uptimeConfigs, err := configReader.GetUptimeConfig()
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "Error parsing configuration: %v\n", err)
-	// 	os.Exit(ExitErrorConfig)
-	// }
-
-	// if len(uptimeConfigs) == 0 {
-	// 	fmt.Fprintln(os.Stderr, "No valid website configurations found in config file")
-	// 	os.Exit(ExitErrorConfig)
-	// }
-
-	// TODO: idk
-	// // Get domains from agent config
-	// domains, err := configReader.GetDomains("/etc/ojtguardian/domains")
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "Error getting domain on agent config: %v\n", err)
-	// 	os.Exit(ExitErrorConfig)
-	// }
-
-	// if len(domains) == 0 {
-	// 	fmt.Fprintln(os.Stderr, "No valid website configurations found in config file")
-	// 	os.Exit(ExitErrorConfig)
-	// }
-
-	// for _, d := range domains {
-	// 	uptimeConfigs = append(uptimeConfigs, &config.NetworkConfig{
-	// 		URL:             d,
-	// 		RefreshInterval: 1 * time.Minute,
-	// 		Timeout:         10 * time.Second,
-	// 		FollowRedirects: true,
-	// 		SkipSSL:         true,
-	// 	})
-	// }
-
-	// Get uptime configuration
 	uptimeConfigs, err := configReader.ParseConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing configuration: %v\n", err)
-		os.Exit(ExitErrorConfig)
-	}
-
-	if len(uptimeConfigs) == 0 {
-		fmt.Fprintln(os.Stderr, "No valid website configurations found in config file")
 		os.Exit(ExitErrorConfig)
 	}
 
