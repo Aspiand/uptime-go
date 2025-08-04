@@ -98,58 +98,12 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 	}
 
 	statusText := "UP"
-
-	if err != nil || !result.IsUp {
-		statusText = "DOWN"
-
-		incident := config.Incident{
-			ID:          config.GenerateRandomID(),
-			MonitorID:   monitor.ID,
-			Description: err.Error(),
-		}
-
-		if !result.IsUp {
-			incident.Type = config.UnexpectedStatusCode
-		} else if os.IsTimeout(err) {
-			result.ResponseTime = monitor.ResponseTimeThreshold
-			incident.Type = config.Timeout
-		} // TODO: ssl expired
-
-		lastIncident := m.db.GetLastIncident(monitor.URL, incident.Type)
-		if lastIncident.CreatedAt.IsZero() {
-			log.Printf("%s - New Incident detected! - Status Code: %s", monitor.URL, incident.Type.String()) // TODO: improve message
-			m.db.DB.Create(&incident)
-		}
+	if result.IsUp {
+		m.resolveIncidents(monitor, []config.ErrorType{config.UnexpectedStatusCode, config.Timeout})
+		m.handleSSL(monitor, result)
 	} else {
-		now := time.Now()
-
-		// Mark incident with unexpected status code or timeout to solved
-		lastIncident := m.db.GetLastIncident(monitor.URL, config.UnexpectedStatusCode)
-		if !lastIncident.CreatedAt.IsZero() {
-			lastIncident.SolvedAt = &now
-			m.db.UpsertRecord(lastIncident, "id")
-			log.Printf("%s - Incident Solved - Downtime %s\n", monitor.URL, time.Since(lastIncident.CreatedAt))
-		}
-
-		// TODO: timeout
-
-		lastSSLIncident := m.db.GetLastIncident(monitor.URL, config.SSLExpired)
-		if time.Until(*result.SSLExpiredDate) <= *monitor.SSLExpiredBefore {
-			if lastSSLIncident.CreatedAt.IsZero() {
-				log.Printf("%s - [%s] - Please update SSL", config.SSLExpired.String(), monitor.URL)
-				m.db.DB.Create(&config.Incident{
-					ID:          config.GenerateRandomID(),
-					MonitorID:   monitor.ID,
-					Description: fmt.Sprintf("SSL will be expired on %s", result.SSLExpiredDate),
-				})
-			}
-		} else {
-			// if lastSSLIncident exists in database; mark solved
-			if !lastSSLIncident.CreatedAt.IsZero() {
-				lastSSLIncident.SolvedAt = &now
-				m.db.UpsertRecord(lastSSLIncident, "id")
-			}
-		}
+		statusText = "DOWN"
+		m.handleWebsiteDown(monitor, result, err)
 	}
 
 	monitor.UpdatedAt = result.LastCheck
@@ -164,15 +118,80 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 		},
 	}
 
-	// TODO: hook
-
-	// Log the result
 	log.Printf("%s - %s - Response time: %v - Status: %d",
 		monitor.URL, statusText, result.ResponseTime, result.StatusCode)
 
-	// Save result to database
-
 	if err := m.db.UpsertRecord(monitor, "id"); err != nil {
 		log.Printf("Failed to save result to database: %v", err)
+	}
+}
+
+func (m *UptimeMonitor) handleWebsiteDown(monitor *config.Monitor, result *net.CheckResults, err error) {
+	var description string
+	incidentType := config.UnexpectedStatusCode
+
+	if err != nil {
+		description = err.Error()
+		if os.IsTimeout(err) {
+			incidentType = config.Timeout
+			result.ResponseTime = monitor.ResponseTimeThreshold
+		}
+	} else {
+		description = fmt.Sprintf("Unexpected status code: %d", result.StatusCode)
+	}
+
+	lastIncident := m.db.GetLastIncident(monitor.URL, incidentType)
+	if !lastIncident.CreatedAt.IsZero() {
+		return // Incident already recorded
+	}
+
+	incident := &config.Incident{
+		ID:          config.GenerateRandomID(),
+		MonitorID:   monitor.ID,
+		Type:        incidentType,
+		Description: description,
+	}
+
+	m.db.DB.Create(incident)
+	log.Printf(
+		"%s - New Incident detected! - Type: %s",
+		monitor.URL, incident.Type.String(),
+	)
+}
+
+func (m *UptimeMonitor) resolveIncidents(monitor *config.Monitor, incidentTypes []config.ErrorType) {
+	now := time.Now()
+	for _, incidentType := range incidentTypes {
+		lastIncident := m.db.GetLastIncident(monitor.URL, incidentType)
+		if !lastIncident.CreatedAt.IsZero() {
+			lastIncident.SolvedAt = &now
+			m.db.UpsertRecord(lastIncident, "id")
+			log.Printf("%s - Incident Solved - Type: %s - Downtime: %s\n", monitor.URL, incidentType.String(), time.Since(lastIncident.CreatedAt))
+		}
+	}
+}
+
+func (m *UptimeMonitor) handleSSL(monitor *config.Monitor, result *net.CheckResults) {
+	// TODO: test
+
+	now := time.Now()
+	lastSSLIncident := m.db.GetLastIncident(monitor.URL, config.SSLExpired)
+
+	isSSLExpiringSoon := result.SSLExpiredDate != nil &&
+		monitor.SSLExpiredBefore != nil &&
+		time.Until(*result.SSLExpiredDate) <= *monitor.SSLExpiredBefore
+
+	if isSSLExpiringSoon && lastSSLIncident.CreatedAt.IsZero() {
+		log.Printf("%s - [%s] - Please update SSL Certificate", config.SSLExpired.String(), monitor.URL)
+		m.db.DB.Create(&config.Incident{
+			ID:          config.GenerateRandomID(),
+			MonitorID:   monitor.ID,
+			Type:        config.SSLExpired,
+			Description: fmt.Sprintf("SSL will be expired on %s", result.SSLExpiredDate),
+		})
+	} else if !lastSSLIncident.CreatedAt.IsZero() {
+		lastSSLIncident.SolvedAt = &now
+		m.db.UpsertRecord(lastSSLIncident, "id")
+		log.Printf("%s - SSL Updated\n", monitor.URL)
 	}
 }
