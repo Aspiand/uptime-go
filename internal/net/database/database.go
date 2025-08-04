@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 	"uptime-go/internal/configuration"
@@ -22,7 +23,7 @@ func InitializeDatabase() (*Database, error) {
 	DBPath := configuration.DBFile
 
 	// Create the directory if it doesn't exist
-	if err := os.MkdirAll("/var/uptime-go/db", 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(DBPath), 0755); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -71,13 +72,14 @@ func InitializeDatabase() (*Database, error) {
 
 	return &Database{DB: db}, nil
 }
+
 func (db *Database) UpsertRecord(record any, column string) error {
 	// Create record if not exists else update
 
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	err := db.DB.Transaction(func(tx *gorm.DB) error {
+	return db.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: column}},
 			UpdateAll: true,
@@ -86,21 +88,15 @@ func (db *Database) UpsertRecord(record any, column string) error {
 		}
 		return nil
 	})
-
-	return err
 }
 
 func (db *Database) GetLastIncident(url string, incidentType config.ErrorType) *config.Incident {
-	// TODO: improve
-
 	var incident config.Incident
 
-	db.DB.
-		Joins("Monitor").
-		Where(
-			"Monitor.url = ? AND incidents.type = ? AND incidents.solved_at IS NULL",
-			url, incidentType,
-		).Find(&incident)
+	db.DB.Joins("Monitor").
+		Where("Monitor.url = ? AND incidents.type = ? AND incidents.solved_at IS NULL", url, incidentType).
+		Order("incidents.created_at DESC").
+		Find(&incident)
 
 	return &incident
 }
