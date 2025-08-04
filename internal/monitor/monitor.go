@@ -182,7 +182,7 @@ func (m *UptimeMonitor) handleSSL(monitor *config.Monitor, result *net.CheckResu
 		time.Until(*result.SSLExpiredDate) <= *monitor.SSLExpiredBefore
 
 	if isSSLExpiringSoon && lastSSLIncident.CreatedAt.IsZero() {
-		log.Printf("%s - [%s] - Please update SSL Certificate", config.SSLExpired.String(), monitor.URL)
+		log.Printf("%s - Please update SSL Certificate - [%s]", monitor.URL, result.SSLExpiredDate)
 		m.db.DB.Create(&config.Incident{
 			ID:          config.GenerateRandomID(),
 			MonitorID:   monitor.ID,
