@@ -106,15 +106,18 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 		m.handleWebsiteDown(monitor, result, err)
 	}
 
+	responseTime := result.ResponseTime.Milliseconds()
 	monitor.UpdatedAt = result.LastCheck
 	monitor.IsUp = &result.IsUp
 	monitor.StatusCode = &result.StatusCode
+	monitor.ResponseTime = &responseTime
+	monitor.CertificateExpiredDate = result.SSLExpiredDate
 	monitor.Histories = []config.MonitorHistory{
 		{
 			ID:           config.GenerateRandomID(),
 			IsUp:         result.IsUp,
 			StatusCode:   result.StatusCode,
-			ResponseTime: result.ResponseTime.Milliseconds(),
+			ResponseTime: responseTime,
 		},
 	}
 

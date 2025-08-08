@@ -27,29 +27,31 @@ type NetworkConfig struct {
 }
 
 type Monitor struct {
-	ID                    string           `json:"id" gorm:"primaryKey"`
-	URL                   string           `json:"url" gorm:"unique"`
-	Enabled               bool             `json:"enabled"`
-	Interval              time.Duration    `json:"-"`
-	ResponseTimeThreshold time.Duration    `json:"-"`
-	SSLMonitoring         bool             `json:"ssl_monitoring"` // enable ssl monitoring
-	SSLExpiredBefore      *time.Duration   `json:"-"`
-	IsUp                  *bool            `json:"is_up"`       // duplicate entry (requested)
-	StatusCode            *int             `json:"status_code"` // duplicate entry (requested)
-	CreatedAt             time.Time        `json:"created_at"`
-	UpdatedAt             time.Time        `json:"updated_at"`
-	Histories             []MonitorHistory `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Incidents             []Incident       `gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	ID                     string           `json:"-" gorm:"primaryKey"`
+	URL                    string           `json:"url" gorm:"unique"`
+	Enabled                bool             `json:"-"`
+	Interval               time.Duration    `json:"-"`
+	ResponseTimeThreshold  time.Duration    `json:"-"`
+	SSLMonitoring          bool             `json:"-"`           // enable ssl monitoring
+	SSLExpiredBefore       *time.Duration   `json:"-"`           // optional
+	IsUp                   *bool            `json:"is_up"`       // duplicate entry (requested)
+	StatusCode             *int             `json:"status_code"` // duplicate entry (requested) // TODO: delete?
+	ResponseTime           *int64           `json:"response_time"`
+	CertificateExpiredDate *time.Time       `json:"certificate_expired_date"`
+	CreatedAt              time.Time        `json:"-"`
+	UpdatedAt              time.Time        `json:"-"`
+	Histories              []MonitorHistory `json:"-" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Incidents              []Incident       `json:"-" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 type MonitorHistory struct {
-	ID           string    `json:"id" gorm:"primaryKey"`
+	ID           string    `json:"-" gorm:"primaryKey"`
 	MonitorID    string    `json:"-"`
 	IsUp         bool      `json:"is_up" gorm:"index"`
-	StatusCode   int       `json:"status_code"`
+	StatusCode   int       `json:"-"`
 	ResponseTime int64     `json:"response_time"` // in milliseconds
 	CreatedAt    time.Time `json:"created_at" gorm:"index"`
-	Monitor      Monitor   `gorm:"foreignKey:MonitorID"`
+	Monitor      Monitor   `json:"-" gorm:"foreignKey:MonitorID"`
 }
 
 type Incident struct {
