@@ -37,7 +37,7 @@ func InitializeDatabase() (*Database, error) {
 	}
 
 	// Open the database connection using GORM and SQLite with connection pool configuration
-	db, err := gorm.Open(sqlite.Open(DBPath), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(DBPath+"?_journal_mode=WAL"), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -92,6 +92,8 @@ func (db *Database) UpsertRecord(record any, column string) error {
 
 func (db *Database) GetLastIncident(url string, incidentType config.ErrorType) *config.Incident {
 	var incident config.Incident
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
 
 	db.DB.Joins("Monitor").
 		Select("incidents.*").
