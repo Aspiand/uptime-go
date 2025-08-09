@@ -27,11 +27,7 @@ var reportCmd = &cobra.Command{
 			var monitor []config.Monitor
 			db.DB.Find(&monitor)
 
-			output, err := json.Marshal(struct {
-				Results []config.Monitor `json:"results"`
-			}{
-				Results: monitor,
-			})
+			output, err := json.Marshal(monitor)
 			if err != nil {
 				fmt.Println("Error while serializing output")
 			}
@@ -47,11 +43,7 @@ var reportCmd = &cobra.Command{
 			Limit(100).
 			Find(&histories)
 
-		output, err := json.Marshal(struct {
-			Histories []config.MonitorHistory `json:"histories"`
-		}{
-			Histories: histories,
-		})
+		output, err := json.Marshal(histories)
 		if err != nil {
 			fmt.Println("Error while serializing output")
 		}
