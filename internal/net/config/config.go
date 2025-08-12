@@ -16,21 +16,22 @@ const (
 )
 
 type Monitor struct {
-	ID                     string           `json:"-" gorm:"primaryKey"`
-	URL                    string           `json:"url" gorm:"unique"`
-	Enabled                bool             `json:"-"`
-	Interval               time.Duration    `json:"-"`
-	ResponseTimeThreshold  time.Duration    `json:"-"`
-	CertificateMonitoring          bool             `json:"-"`           // enable ssl monitoring
-	CertificateExpiredBefore       *time.Duration   `json:"-"`           // optional
-	IsUp                   *bool            `json:"is_up"`       // duplicate entry (requested)
-	StatusCode             *int             `json:"status_code"` // duplicate entry (requested) // TODO: delete?
-	ResponseTime           *int64           `json:"response_time"`
-	CertificateExpiredDate *time.Time       `json:"certificate_expired_date"`
-	CreatedAt              time.Time        `json:"-"`
-	UpdatedAt              time.Time        `json:"last_check"`
-	Histories              []MonitorHistory `json:"-" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Incidents              []Incident       `json:"-" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	ID                       string           `json:"-" gorm:"primaryKey"`
+	URL                      string           `json:"url" gorm:"unique"`
+	Enabled                  bool             `json:"-"`
+	Interval                 time.Duration    `json:"-"`
+	ResponseTimeThreshold    time.Duration    `json:"-"`
+	CertificateMonitoring    bool             `json:"-"` // enable ssl monitoring
+	CertificateExpiredBefore *time.Duration   `json:"-"`
+	IsUp                     *bool            `json:"is_up"` // remove and use last_up instead?; mls
+	StatusCode               *int             `json:"status_code"`
+	ResponseTime             *int64           `json:"response_time"`
+	CertificateExpiredDate   *time.Time       `json:"certificate_expired_date"`
+	LastUp                   *time.Time       `json:"last_up"`
+	CreatedAt                time.Time        `json:"-"`
+	UpdatedAt                time.Time        `json:"last_check"`
+	Histories                []MonitorHistory `json:"-" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Incidents                []Incident       `json:"-" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 type MonitorHistory struct {
