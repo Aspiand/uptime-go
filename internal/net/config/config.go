@@ -7,9 +7,6 @@ import (
 	"uptime-go/internal/net"
 )
 
-// TODO:
-// - change SSLExpiredBefore to time.Time?
-
 type ErrorType int
 
 const (
@@ -18,28 +15,20 @@ const (
 	Timeout
 )
 
-type NetworkConfig struct {
-	URL             string        // URL to check
-	RefreshInterval time.Duration // Interval between checks (for monitoring mode)
-	Timeout         time.Duration // HTTP request timeout (second)
-	FollowRedirects bool          // Whether to follow HTTP redirects
-	SkipSSL         bool          // Whether to skip SSL certificate verification
-}
-
 type Monitor struct {
 	ID                     string           `json:"-" gorm:"primaryKey"`
 	URL                    string           `json:"url" gorm:"unique"`
 	Enabled                bool             `json:"-"`
 	Interval               time.Duration    `json:"-"`
 	ResponseTimeThreshold  time.Duration    `json:"-"`
-	SSLMonitoring          bool             `json:"-"`           // enable ssl monitoring
-	SSLExpiredBefore       *time.Duration   `json:"-"`           // optional
+	CertificateMonitoring          bool             `json:"-"`           // enable ssl monitoring
+	CertificateExpiredBefore       *time.Duration   `json:"-"`           // optional
 	IsUp                   *bool            `json:"is_up"`       // duplicate entry (requested)
 	StatusCode             *int             `json:"status_code"` // duplicate entry (requested) // TODO: delete?
 	ResponseTime           *int64           `json:"response_time"`
 	CertificateExpiredDate *time.Time       `json:"certificate_expired_date"`
 	CreatedAt              time.Time        `json:"-"`
-	UpdatedAt              time.Time        `json:"-"`
+	UpdatedAt              time.Time        `json:"last_check"`
 	Histories              []MonitorHistory `json:"-" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Incidents              []Incident       `json:"-" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
@@ -83,7 +72,7 @@ func (m *Monitor) ToNetworkConfig() *net.NetworkConfig {
 		RefreshInterval: m.Interval,
 		Timeout:         m.ResponseTimeThreshold,
 		// FollowRedirects: true,
-		SkipSSL: !m.SSLMonitoring,
+		SkipSSL: !m.CertificateMonitoring,
 	}
 }
 

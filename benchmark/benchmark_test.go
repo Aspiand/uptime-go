@@ -93,7 +93,7 @@ func createTestConfigs(count int, server *httptest.Server) []*config.Monitor {
 			Enabled:               true,
 			Interval:              1 * time.Second,
 			ResponseTimeThreshold: 500 * time.Millisecond,
-			SSLMonitoring:         false,
+			CertificateMonitoring:         false,
 			// FollowRedirects: true,
 		}
 	}
