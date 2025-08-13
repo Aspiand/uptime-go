@@ -23,7 +23,7 @@ With a URL flag, it provides a detailed report for the specified site, including
 	Run: func(cmd *cobra.Command, args []string) {
 		db, err := database.InitializeDatabase()
 		if err != nil {
-			fmt.Printf("failed to initialize database: %v", err)
+			fmt.Printf("failed to initialize database: %v\n", err)
 			os.Exit(ExitErrorConnection)
 		}
 
@@ -33,26 +33,31 @@ With a URL flag, it provides a detailed report for the specified site, including
 
 			output, err := json.Marshal(monitor)
 			if err != nil {
-				fmt.Println("Error while serializing output")
+				fmt.Println("error while serializing output")
+				os.Exit(1)
 			}
 
-			fmt.Println(string(output))
+			fmt.Print(string(output))
 			return
 		}
 
 		var monitor config.Monitor
-		if err := db.DB.
+		db.DB.
 			Preload("Histories", func(db *gorm.DB) *gorm.DB {
 				return db.Order("monitor_histories.created_at DESC").Limit(100)
 			}).
 			Where("url = ?", domainURL).
-			First(&monitor).Error; err != nil {
-			fmt.Printf("%s: error while getting record\n", domainURL)
+			Find(&monitor)
+
+		if monitor.CreatedAt.IsZero() {
+			fmt.Printf("%s: record not found\n", domainURL)
+			os.Exit(1)
 		}
 
 		output, err := json.Marshal(monitor)
 		if err != nil {
 			fmt.Printf("%s: error while encoding result\n", domainURL)
+			os.Exit(1)
 		}
 
 		fmt.Print(string(output))
