@@ -8,9 +8,10 @@ import (
 	"uptime-go/internal/net/database"
 
 	"github.com/spf13/cobra"
+	"gorm.io/gorm"
 )
 
-var domainName string
+var domainURL string
 
 var reportCmd = &cobra.Command{
 	Use:   "report",
@@ -23,7 +24,7 @@ var reportCmd = &cobra.Command{
 			os.Exit(ExitErrorConnection)
 		}
 
-		if domainName == "" {
+		if domainURL == "" {
 			var monitor []config.Monitor
 			db.DB.Find(&monitor)
 
@@ -36,24 +37,27 @@ var reportCmd = &cobra.Command{
 			return
 		}
 
-		var histories []config.MonitorHistory
-		db.DB.Joins("JOIN monitors ON monitors.id = monitor_histories.monitor_id").
-			Where("monitors.url = ?", domainName).
-			Order("monitor_histories.created_at DESC").
-			Limit(100).
-			Find(&histories)
-
-		output, err := json.Marshal(histories)
-		if err != nil {
-			fmt.Println("Error while serializing output")
+		var monitor config.Monitor
+		if err := db.DB.
+			Preload("Histories", func(db *gorm.DB) *gorm.DB {
+				return db.Order("monitor_histories.created_at DESC").Limit(100)
+			}).
+			Where("url = ?", domainURL).
+			First(&monitor).Error; err != nil {
+			fmt.Printf("%s: error while getting record\n", domainURL)
 		}
 
-		fmt.Println(string(output))
+		output, err := json.Marshal(monitor)
+		if err != nil {
+			fmt.Printf("%s: error while encoding result\n", domainURL)
+		}
+
+		fmt.Print(string(output))
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(reportCmd)
 
-	reportCmd.Flags().StringVarP(&domainName, "url", "u", "", "URL")
+	reportCmd.Flags().StringVarP(&domainURL, "url", "u", "", "URL")
 }

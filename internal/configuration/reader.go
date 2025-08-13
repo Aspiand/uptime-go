@@ -93,14 +93,14 @@ func (c *ConfigReader) ParseConfig() ([]*config.Monitor, error) {
 		}
 
 		// Get skip SSL verification
-		if skipSSL, ok := monitor["ssl_monitoring"].(bool); ok {
+		if skipSSL, ok := monitor["certificate_monitoring"].(bool); ok {
 			config.CertificateMonitoring = skipSSL
 		} else {
 			config.CertificateMonitoring = false // Default skip SSL
 		}
 
 		// Get SSL expired before
-		if sslExpired, ok := monitor["ssl_expired_before"].(string); ok {
+		if sslExpired, ok := monitor["certificate_expired_before"].(string); ok {
 			expired := ParseDuration(sslExpired, "1M")
 			config.CertificateExpiredBefore = &expired
 		} else {

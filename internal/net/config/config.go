@@ -21,16 +21,16 @@ type Monitor struct {
 	Enabled                  bool             `json:"-"`
 	Interval                 time.Duration    `json:"-"`
 	ResponseTimeThreshold    time.Duration    `json:"-"`
-	CertificateMonitoring    bool             `json:"-"` // enable ssl monitoring
+	CertificateMonitoring    bool             `json:"-"`
 	CertificateExpiredBefore *time.Duration   `json:"-"`
-	IsUp                     *bool            `json:"is_up"` // remove and use last_up instead?; mls
+	IsUp                     *bool            `json:"is_up"`
 	StatusCode               *int             `json:"status_code"`
 	ResponseTime             *int64           `json:"response_time"`
 	CertificateExpiredDate   *time.Time       `json:"certificate_expired_date"`
 	LastUp                   *time.Time       `json:"last_up"`
 	CreatedAt                time.Time        `json:"-"`
 	UpdatedAt                time.Time        `json:"last_check"`
-	Histories                []MonitorHistory `json:"-" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Histories                []MonitorHistory `json:"histories,omitempty" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Incidents                []Incident       `json:"-" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
