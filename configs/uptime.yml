@@ -3,7 +3,7 @@
 monitor:
   - url: "http://example.com"
     enabled: true
-    interval: 15s
+    interval: 5m
     response_time_threshold: 5s
-    ssl_monitoring: true
-    ssl_expired_before: 4M
+    certificate_monitoring: true
+    certificate_expired_before: 1M

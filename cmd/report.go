@@ -15,8 +15,11 @@ var domainURL string
 
 var reportCmd = &cobra.Command{
 	Use:   "report",
-	Short: "A brief description of your command",
-	Long:  ``, // TODO: add later
+	Short: "Generate monitoring report",
+	Long: `Generate a JSON report of the monitoring status.
+
+Without a URL flag, it reports all monitored sites.
+With a URL flag, it provides a detailed report for the specified site, including the last 100 history records.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		db, err := database.InitializeDatabase()
 		if err != nil {
