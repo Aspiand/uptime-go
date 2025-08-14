@@ -77,12 +77,8 @@ func (m *Monitor) ToNetworkConfig() *net.NetworkConfig {
 	}
 }
 
-func generateRandomID(n int) string {
-	b := make([]byte, n)
+func GenerateRandomID() string {
+	b := make([]byte, 4)
 	rand.Read(b)
 	return hex.EncodeToString(b)
-}
-
-func GenerateRandomID() string {
-	return generateRandomID(4)
 }
