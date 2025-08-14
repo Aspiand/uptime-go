@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"uptime-go/internal/configuration"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -13,8 +14,8 @@ import (
 // setConfigCmd represents the set-config command
 var setConfigCmd = &cobra.Command{
 	Use:   "set-config",
-	Short: "Reads a JSON string, converts it to YAML, and saves it to configs/uptime.yml",
-	Long:  `This command takes a JSON string as an argument, parses it, and writes the configuration to configs/uptime.yml in YAML format.`,
+	Short: "Reads a JSON string, converts it to YAML, and saves it to configuration file",
+	Long:  `This command takes a JSON string as an argument, parses it, and writes the configuration to configuration file in YAML format.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		jsonConfig := args[0]
@@ -43,7 +44,7 @@ var setConfigCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		err = os.WriteFile("/etc/ojtguardian/plugins/uptime/config.yml", yamlData, 0644)
+		err = os.WriteFile(configuration.Config.ConfigFile, yamlData, 0644)
 		if err != nil {
 			msg := fmt.Sprintf("Error writing YAML file: %v\n", err)
 			fmt.Fprintln(os.Stderr, msg)

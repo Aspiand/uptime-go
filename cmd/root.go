@@ -16,12 +16,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type AppConfig struct {
-	ConfigFile string
-}
-
-var Config AppConfig
-
 // Constants for exit codes
 const (
 	ExitSuccess          = 0
@@ -46,22 +40,18 @@ Usage: uptime-go [--config=path/to/uptime.yaml]`,
 
 // runMonitorMode reads the configuration file and starts continuous monitoring
 func runMonitorMode() {
-	if Config.ConfigFile == "" {
-		Config.ConfigFile = configuration.ConfigFile
-	}
-
 	// Ensure config file is absolute
-	if !filepath.IsAbs(Config.ConfigFile) {
-		absPath, err := filepath.Abs(Config.ConfigFile)
+	if !filepath.IsAbs(configuration.Config.ConfigFile) {
+		absPath, err := filepath.Abs(configuration.Config.ConfigFile)
 		if err == nil {
-			Config.ConfigFile = absPath
+			configuration.Config.ConfigFile = absPath
 		}
 	}
 
 	// Read configuration
-	fmt.Printf("Loading configuration from %s\n", Config.ConfigFile)
+	fmt.Printf("Loading configuration from %s\n", configuration.Config.ConfigFile)
 	configReader := configuration.NewConfigReader()
-	if err := configReader.ReadConfig(Config.ConfigFile); err != nil {
+	if err := configReader.ReadConfig(configuration.Config.ConfigFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading configuration: %v\n", err)
 		os.Exit(ExitErrorConfig)
 	}
@@ -113,5 +103,6 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().StringVarP(&Config.ConfigFile, "config", "c", "", "Path to configuration file")
+	rootCmd.PersistentFlags().StringVarP(&configuration.Config.ConfigFile, "config", "c", "/etc/ojtguardian/plugins/uptime/config.yml", "Path to configuration file")
+	rootCmd.PersistentFlags().StringVarP(&configuration.Config.DBFile, "database", "", "/etc/ojtguardian/plugins/uptime/uptime.db", "Path to database file")
 }

@@ -130,7 +130,7 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 	log.Printf("%s - %s - Response time: %v - Status: %d",
 		monitor.URL, statusText, result.ResponseTime, result.StatusCode)
 
-	if err := m.db.UpsertRecord(monitor, "id"); err != nil {
+	if err := m.db.Upsert(monitor); err != nil {
 		log.Printf("Failed to save result to database: %v", err)
 	}
 }
@@ -175,7 +175,7 @@ func (m *UptimeMonitor) resolveIncidents(monitor *config.Monitor, incidentTypes 
 		if !lastIncident.CreatedAt.IsZero() {
 			// monitor.LastUp = &now
 			lastIncident.SolvedAt = &now
-			m.db.UpsertRecord(lastIncident, "id")
+			m.db.Upsert(lastIncident)
 			log.Printf("%s - Incident Solved - Type: %s - Downtime: %s\n", monitor.URL, incidentType.String(), time.Since(lastIncident.CreatedAt))
 		}
 	}
@@ -199,7 +199,7 @@ func (m *UptimeMonitor) handleSSL(monitor *config.Monitor, result *net.CheckResu
 		})
 	} else if !isSSLExpiringSoon && !lastSSLIncident.CreatedAt.IsZero() {
 		lastSSLIncident.SolvedAt = &now
-		m.db.UpsertRecord(lastSSLIncident, "id")
+		m.db.Upsert(lastSSLIncident)
 		log.Printf("%s - SSL Updated\n", monitor.URL)
 	}
 }

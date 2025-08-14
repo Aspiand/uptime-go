@@ -20,7 +20,7 @@ type Database struct {
 }
 
 func InitializeDatabase() (*Database, error) {
-	DBPath := configuration.DBFile
+	DBPath := configuration.Config.DBFile
 
 	// Create the directory if it doesn't exist
 	if err := os.MkdirAll(filepath.Dir(DBPath), 0755); err != nil {
@@ -88,6 +88,10 @@ func (db *Database) UpsertRecord(record any, column string) error {
 		}
 		return nil
 	})
+}
+
+func (db *Database) Upsert(record any) error {
+	return db.UpsertRecord(record, "id")
 }
 
 func (db *Database) GetLastIncident(url string, incidentType config.ErrorType) *config.Incident {
