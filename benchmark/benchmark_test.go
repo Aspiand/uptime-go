@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"uptime-go/internal/configuration"
 	"uptime-go/internal/monitor"
 	"uptime-go/internal/net/config"
 	"uptime-go/internal/net/database"
@@ -93,7 +94,7 @@ func createTestConfigs(count int, server *httptest.Server) []*config.Monitor {
 			Enabled:               true,
 			Interval:              1 * time.Second,
 			ResponseTimeThreshold: 500 * time.Millisecond,
-			CertificateMonitoring:         false,
+			CertificateMonitoring: false,
 			// FollowRedirects: true,
 		}
 	}
@@ -112,6 +113,8 @@ func benchmarkMonitor(b *testing.B, websiteCount int) {
 	// Record memory before
 	beforeStats := getMemStats()
 	startTime := time.Now()
+
+	configuration.Config.DBFile = "./uptime.db"
 
 	// Create database connection
 	db, err := database.InitializeDatabase()
