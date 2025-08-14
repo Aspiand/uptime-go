@@ -7,10 +7,10 @@ import (
 	"uptime-go/internal/net"
 )
 
-type ErrorType int
+type IncidentType int
 
 const (
-	UnexpectedStatusCode ErrorType = iota
+	UnexpectedStatusCode IncidentType = iota
 	SSLExpired
 	Timeout
 )
@@ -45,16 +45,16 @@ type MonitorHistory struct {
 }
 
 type Incident struct {
-	ID          string     `json:"id" gorm:"primaryKey"`
-	MonitorID   string     `json:"monitor_id"`
-	Type        ErrorType  `json:"type" gorm:"index"`
-	Description string     `json:"description"`
-	CreatedAt   time.Time  `json:"created_at"`
-	SolvedAt    *time.Time `json:"solved_at" gorm:"index"`
-	Monitor     Monitor    `gorm:"foreignKey:MonitorID"`
+	ID          string       `json:"id" gorm:"primaryKey"`
+	MonitorID   string       `json:"monitor_id"`
+	Type        IncidentType `json:"type" gorm:"index"`
+	Description string       `json:"description"`
+	CreatedAt   time.Time    `json:"created_at"`
+	SolvedAt    *time.Time   `json:"solved_at" gorm:"index"`
+	Monitor     Monitor      `gorm:"foreignKey:MonitorID"`
 }
 
-func (e ErrorType) String() string {
+func (e IncidentType) String() string {
 	switch e {
 	case Timeout:
 		return "Timeout occurred"

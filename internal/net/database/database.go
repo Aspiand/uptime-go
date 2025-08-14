@@ -73,6 +73,28 @@ func InitializeDatabase() (*Database, error) {
 	return &Database{DB: db}, nil
 }
 
+func InitializeTestDatabase() (*Database, error) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+		// NamingStrategy: schema.NamingStrategy{
+		// 	TablePrefix: "test_" + fmt.Sprint(time.Now().Unix()) + "_",
+		// },
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	if err := db.AutoMigrate(
+		&config.Monitor{},
+		&config.MonitorHistory{},
+		&config.Incident{},
+	); err != nil {
+		return nil, fmt.Errorf("failed to migrate database schema: %w", err)
+	}
+
+	return &Database{DB: db}, nil
+}
+
 func (db *Database) UpsertRecord(record any, column string) error {
 	// Create record if not exists else update
 
@@ -94,7 +116,7 @@ func (db *Database) Upsert(record any) error {
 	return db.UpsertRecord(record, "id")
 }
 
-func (db *Database) GetLastIncident(url string, incidentType config.ErrorType) *config.Incident {
+func (db *Database) GetLastIncident(url string, incidentType config.IncidentType) *config.Incident {
 	var incident config.Incident
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()

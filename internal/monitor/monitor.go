@@ -99,7 +99,8 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 
 	statusText := "UP"
 	if result.IsUp {
-		m.resolveIncidents(monitor, []config.ErrorType{config.UnexpectedStatusCode, config.Timeout})
+		m.resolveIncidents(monitor, config.UnexpectedStatusCode)
+		m.resolveIncidents(monitor, config.Timeout)
 		m.handleSSL(monitor, result)
 
 		if monitor.LastUp == nil {
@@ -135,7 +136,9 @@ func (m *UptimeMonitor) checkWebsite(monitor *config.Monitor) {
 	}
 }
 
-func (m *UptimeMonitor) handleWebsiteDown(monitor *config.Monitor, result *net.CheckResults, err error) {
+func (m *UptimeMonitor) handleWebsiteDown(monitor *config.Monitor, result *net.CheckResults, err error) (bool, config.IncidentType) {
+	// return true if new incident created; else false and incident type
+
 	var description string
 	incidentType := config.UnexpectedStatusCode
 
@@ -151,7 +154,7 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *config.Monitor, result *net.C
 
 	lastIncident := m.db.GetLastIncident(monitor.URL, incidentType)
 	if !lastIncident.CreatedAt.IsZero() {
-		return // Incident already recorded
+		return false, incidentType // Incident already recorded
 	}
 
 	incident := &config.Incident{
@@ -166,22 +169,26 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *config.Monitor, result *net.C
 		"%s - New Incident detected! - Type: %s",
 		monitor.URL, incident.Type.String(),
 	)
+
+	return true, incidentType
 }
 
-func (m *UptimeMonitor) resolveIncidents(monitor *config.Monitor, incidentTypes []config.ErrorType) {
+func (m *UptimeMonitor) resolveIncidents(monitor *config.Monitor, incidentType config.IncidentType) bool {
+	// return true if incident solved; else false
+
 	now := time.Now()
-	for _, incidentType := range incidentTypes {
-		lastIncident := m.db.GetLastIncident(monitor.URL, incidentType)
-		if !lastIncident.CreatedAt.IsZero() {
-			// monitor.LastUp = &now
-			lastIncident.SolvedAt = &now
-			m.db.Upsert(lastIncident)
-			log.Printf("%s - Incident Solved - Type: %s - Downtime: %s\n", monitor.URL, incidentType.String(), time.Since(lastIncident.CreatedAt))
-		}
+	lastIncident := m.db.GetLastIncident(monitor.URL, incidentType)
+	if !lastIncident.CreatedAt.IsZero() {
+		lastIncident.SolvedAt = &now
+		m.db.Upsert(lastIncident)
+		log.Printf("%s - Incident Solved - Type: %s - Downtime: %s\n", monitor.URL, incidentType.String(), time.Since(lastIncident.CreatedAt))
+		return true
 	}
+
+	return false
 }
 
-func (m *UptimeMonitor) handleSSL(monitor *config.Monitor, result *net.CheckResults) {
+func (m *UptimeMonitor) handleSSL(monitor *config.Monitor, result *net.CheckResults) bool {
 	now := time.Now()
 	lastSSLIncident := m.db.GetLastIncident(monitor.URL, config.SSLExpired)
 
@@ -197,9 +204,13 @@ func (m *UptimeMonitor) handleSSL(monitor *config.Monitor, result *net.CheckResu
 			Type:        config.SSLExpired,
 			Description: fmt.Sprintf("SSL will be expired on %s", result.SSLExpiredDate),
 		})
+		return true
 	} else if !isSSLExpiringSoon && !lastSSLIncident.CreatedAt.IsZero() {
 		lastSSLIncident.SolvedAt = &now
 		m.db.Upsert(lastSSLIncident)
 		log.Printf("%s - SSL Updated\n", monitor.URL)
+		return true
 	}
+
+	return false
 }
