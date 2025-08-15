@@ -1,9 +1,8 @@
 package models
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"time"
+	"uptime-go/internal/helper"
 	"uptime-go/internal/net"
 
 	"gorm.io/gorm"
@@ -68,7 +67,7 @@ func (m *Monitor) ToNetworkConfig() *net.NetworkConfig {
 }
 
 func (h *MonitorHistory) BeforeCreate(tx *gorm.DB) (err error) {
-	h.ID = GenerateRandomID()
+	h.ID = helper.GenerateRandomID()
 
 	return nil
 }
@@ -84,10 +83,4 @@ func (e IncidentType) String() string {
 	default:
 		return "Unknown error"
 	}
-}
-
-func GenerateRandomID() string {
-	b := make([]byte, 4)
-	rand.Read(b)
-	return hex.EncodeToString(b)
 }

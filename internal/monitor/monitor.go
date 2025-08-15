@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"uptime-go/internal/helper"
 	"uptime-go/internal/models"
 	"uptime-go/internal/net"
 	"uptime-go/internal/net/database"
@@ -157,7 +158,7 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.C
 	}
 
 	incident := &models.Incident{
-		ID:          models.GenerateRandomID(),
+		ID:          helper.GenerateRandomID(),
 		MonitorID:   monitor.ID,
 		Type:        incidentType,
 		Description: description,
