@@ -157,6 +157,7 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.C
 	}
 
 	incident := &models.Incident{
+		ID:          models.GenerateRandomID(),
 		MonitorID:   monitor.ID,
 		Type:        incidentType,
 		Description: description,

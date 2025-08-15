@@ -67,20 +67,8 @@ func (m *Monitor) ToNetworkConfig() *net.NetworkConfig {
 	}
 }
 
-// func (m *Monitor) BeforeCreate(tx *gorm.DB) (err error) {
-// 	m.ID = GenerateRandomID()
-
-// 	return nil
-// }
-
 func (h *MonitorHistory) BeforeCreate(tx *gorm.DB) (err error) {
 	h.ID = GenerateRandomID()
-
-	return nil
-}
-
-func (i *Incident) BeforeCreate(tx *gorm.DB) (err error) {
-	i.ID = GenerateRandomID()
 
 	return nil
 }
