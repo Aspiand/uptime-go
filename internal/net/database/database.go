@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 	"uptime-go/internal/configuration"
-	"uptime-go/internal/net/config"
+	"uptime-go/internal/models"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -63,9 +63,9 @@ func InitializeDatabase() (*Database, error) {
 
 	// Migrate the schema
 	if err := db.AutoMigrate(
-		&config.Monitor{},
-		&config.MonitorHistory{},
-		&config.Incident{},
+		&models.Monitor{},
+		&models.MonitorHistory{},
+		&models.Incident{},
 	); err != nil {
 		return nil, fmt.Errorf("failed to migrate database schema: %w", err)
 	}
@@ -85,9 +85,9 @@ func InitializeTestDatabase() (*Database, error) {
 	}
 
 	if err := db.AutoMigrate(
-		&config.Monitor{},
-		&config.MonitorHistory{},
-		&config.Incident{},
+		&models.Monitor{},
+		&models.MonitorHistory{},
+		&models.Incident{},
 	); err != nil {
 		return nil, fmt.Errorf("failed to migrate database schema: %w", err)
 	}
@@ -116,8 +116,9 @@ func (db *Database) Upsert(record any) error {
 	return db.UpsertRecord(record, "id")
 }
 
-func (db *Database) GetLastIncident(url string, incidentType config.IncidentType) *config.Incident {
-	var incident config.Incident
+func (db *Database) GetLastIncident(url string, incidentType models.IncidentType) *models.Incident {
+	var incident models.Incident
+
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
 

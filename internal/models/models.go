@@ -1,4 +1,4 @@
-package config
+package models
 
 import (
 	"crypto/rand"
@@ -45,26 +45,14 @@ type MonitorHistory struct {
 }
 
 type Incident struct {
-	ID          string       `json:"id" gorm:"primaryKey"`
-	MonitorID   string       `json:"monitor_id"`
+	ID        string `json:"id" gorm:"primaryKey"`
+	MonitorID string `json:"monitor_id"`
+	// IncidentID  int          `json:"incident_id"` // incident id on master
 	Type        IncidentType `json:"type" gorm:"index"`
 	Description string       `json:"description"`
 	CreatedAt   time.Time    `json:"created_at"`
 	SolvedAt    *time.Time   `json:"solved_at" gorm:"index"`
 	Monitor     Monitor      `gorm:"foreignKey:MonitorID"`
-}
-
-func (e IncidentType) String() string {
-	switch e {
-	case Timeout:
-		return "Timeout occurred"
-	case SSLExpired:
-		return "SSL certificate expired"
-	case UnexpectedStatusCode:
-		return "Unexpected status code"
-	default:
-		return "Unknown error"
-	}
 }
 
 func (m *Monitor) ToNetworkConfig() *net.NetworkConfig {
@@ -81,4 +69,35 @@ func GenerateRandomID() string {
 	b := make([]byte, 4)
 	rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// func (m *Monitor) BeforeCreate(tx *gorm.DB) (err error) {
+// 	m.ID = GenerateRandomID()
+
+// 	return nil
+// }
+
+// func (h *MonitorHistory) BeforeCreate(tx *gorm.DB) (err error) {
+// 	h.ID = GenerateRandomID()
+
+// 	return nil
+// }
+
+// func (i *Incident) BeforeCreate(tx *gorm.DB) (err error) {
+// 	i.ID = GenerateRandomID()
+
+// 	return nil
+// }
+
+func (e IncidentType) String() string {
+	switch e {
+	case Timeout:
+		return "Timeout occurred"
+	case SSLExpired:
+		return "SSL certificate expired"
+	case UnexpectedStatusCode:
+		return "Unexpected status code"
+	default:
+		return "Unknown error"
+	}
 }

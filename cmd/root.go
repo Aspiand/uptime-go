@@ -10,7 +10,6 @@ import (
 
 	"uptime-go/internal/configuration"
 	"uptime-go/internal/monitor"
-	"uptime-go/internal/net/config"
 	"uptime-go/internal/net/database"
 
 	"github.com/spf13/cobra"
@@ -65,10 +64,7 @@ func runMonitorMode() {
 
 	var urls []string
 
-	// Generate a temporary ID for the config.
-	// It will be replaced by the database ID if the record exists.
 	for _, r := range uptimeConfigs {
-		r.ID = config.GenerateRandomID()
 		urls = append(urls, r.URL)
 	}
 

@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 	"time"
+	"uptime-go/internal/models"
 	"uptime-go/internal/net"
-	"uptime-go/internal/net/config"
 	"uptime-go/internal/net/database"
 
 	"github.com/stretchr/testify/assert"
@@ -17,13 +17,13 @@ func TestMonitorHandleWebsiteDown_NewTimeoutIncident(t *testing.T) {
 
 	db, _ := database.InitializeTestDatabase()
 	uptimeMonitor, _ := NewUptimeMonitor(db, nil)
-	monitor := config.Monitor{}
+	monitor := models.Monitor{}
 	checkResult := net.CheckResults{}
 
 	result, incidentType := uptimeMonitor.handleWebsiteDown(&monitor, &checkResult, os.ErrDeadlineExceeded)
 
 	assert.True(t, result)
-	assert.Equal(t, incidentType, config.Timeout)
+	assert.Equal(t, incidentType, models.Timeout)
 }
 
 func TestMonitorHandleWebsiteDown_IncidentAlreadyExists(t *testing.T) {
@@ -32,9 +32,9 @@ func TestMonitorHandleWebsiteDown_IncidentAlreadyExists(t *testing.T) {
 	db, _ := database.InitializeTestDatabase()
 	uptimeMonitor, _ := NewUptimeMonitor(db, nil)
 	checkResult := net.CheckResults{}
-	monitor := config.Monitor{
-		Incidents: []config.Incident{
-			{Type: config.UnexpectedStatusCode},
+	monitor := models.Monitor{
+		Incidents: []models.Incident{
+			{Type: models.UnexpectedStatusCode},
 		},
 	}
 
@@ -42,36 +42,36 @@ func TestMonitorHandleWebsiteDown_IncidentAlreadyExists(t *testing.T) {
 
 	result, incidentType := uptimeMonitor.handleWebsiteDown(
 		&monitor, &checkResult,
-		errors.New(config.UnexpectedStatusCode.String()),
+		errors.New(models.UnexpectedStatusCode.String()),
 	)
 
 	assert.False(t, result)
-	assert.Equal(t, incidentType, config.UnexpectedStatusCode)
+	assert.Equal(t, incidentType, models.UnexpectedStatusCode)
 }
 
 func TestMonitorResolveIncidents_CanBeSolve(t *testing.T) {
 	db, _ := database.InitializeTestDatabase()
 	uptimeMonitor, _ := NewUptimeMonitor(db, nil)
-	monitor := config.Monitor{
-		Incidents: []config.Incident{
-			{Type: config.Timeout},
+	monitor := models.Monitor{
+		Incidents: []models.Incident{
+			{Type: models.Timeout},
 		},
 	}
 
 	db.DB.Create(&monitor)
 
-	result := uptimeMonitor.resolveIncidents(&monitor, config.Timeout)
+	result := uptimeMonitor.resolveIncidents(&monitor, models.Timeout)
 	assert.True(t, result)
 }
 
 func TestMonitorResolveIncidents_NothingToSolve(t *testing.T) {
 	db, _ := database.InitializeTestDatabase()
-	monitor := config.Monitor{}
+	monitor := models.Monitor{}
 	uptimeMonitor, _ := NewUptimeMonitor(db, nil)
 
 	db.DB.Create(&monitor)
 
-	result := uptimeMonitor.resolveIncidents(&monitor, config.SSLExpired)
+	result := uptimeMonitor.resolveIncidents(&monitor, models.SSLExpired)
 	assert.False(t, result)
 }
 
@@ -79,15 +79,15 @@ func TestMonitorResolveIncidents_NothingToSolve2(t *testing.T) {
 	db, _ := database.InitializeTestDatabase()
 	now := time.Now()
 	uptimeMonitor, _ := NewUptimeMonitor(db, nil)
-	monitor := config.Monitor{
-		Incidents: []config.Incident{
-			{Type: config.Timeout, SolvedAt: &now},
+	monitor := models.Monitor{
+		Incidents: []models.Incident{
+			{Type: models.Timeout, SolvedAt: &now},
 		},
 	}
 
 	db.DB.Create(&monitor)
 
-	result := uptimeMonitor.resolveIncidents(&monitor, config.Timeout)
+	result := uptimeMonitor.resolveIncidents(&monitor, models.Timeout)
 	assert.False(t, result)
 }
 
@@ -97,7 +97,7 @@ func TestHandleSSL_Create(t *testing.T) {
 	expiredDuration := time.Duration(31 * 7 * 24 * time.Hour)
 	expiredDate := time.Now()
 
-	monitor := config.Monitor{CertificateExpiredBefore: &expiredDuration}
+	monitor := models.Monitor{CertificateExpiredBefore: &expiredDuration}
 	checkResult := net.CheckResults{SSLExpiredDate: &expiredDate}
 
 	result := uptimeMonitor.handleSSL(&monitor, &checkResult)
@@ -112,10 +112,10 @@ func TestHandleSSL_Solve(t *testing.T) {
 	expiredDate := time.Now().Add(99999999 * time.Minute)
 
 	checkResult := net.CheckResults{SSLExpiredDate: &expiredDate}
-	monitor := config.Monitor{
+	monitor := models.Monitor{
 		CertificateExpiredBefore: &expiredDuration,
-		Incidents: []config.Incident{
-			{Type: config.SSLExpired},
+		Incidents: []models.Incident{
+			{Type: models.SSLExpired},
 		},
 	}
 

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"uptime-go/internal/net/config"
+	"uptime-go/internal/models"
 	"uptime-go/internal/net/database"
 
 	"github.com/spf13/cobra"
@@ -28,7 +28,7 @@ With a URL flag, it provides a detailed report for the specified site, including
 		}
 
 		if domainURL == "" {
-			var monitor []config.Monitor
+			var monitor []models.Monitor
 			db.DB.Find(&monitor)
 
 			output, err := json.Marshal(monitor)
@@ -41,7 +41,7 @@ With a URL flag, it provides a detailed report for the specified site, including
 			return
 		}
 
-		var monitor config.Monitor
+		var monitor models.Monitor
 		db.DB.
 			Preload("Histories", func(db *gorm.DB) *gorm.DB {
 				return db.Order("monitor_histories.created_at DESC").Limit(100)

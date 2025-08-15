@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"uptime-go/internal/configuration"
+	"uptime-go/internal/models"
 	"uptime-go/internal/monitor"
-	"uptime-go/internal/net/config"
 	"uptime-go/internal/net/database"
 )
 
@@ -86,10 +86,10 @@ func createTestServer(statusCode int, responseDelay time.Duration) *httptest.Ser
 }
 
 // createTestConfigs creates test NetworkConfig entries
-func createTestConfigs(count int, server *httptest.Server) []*config.Monitor {
-	configs := make([]*config.Monitor, count)
+func createTestConfigs(count int, server *httptest.Server) []*models.Monitor {
+	configs := make([]*models.Monitor, count)
 	for i := 0; i < count; i++ {
-		configs[i] = &config.Monitor{
+		configs[i] = &models.Monitor{
 			URL:                   server.URL,
 			Enabled:               true,
 			Interval:              1 * time.Second,

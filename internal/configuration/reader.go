@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"time"
-	"uptime-go/internal/net/config"
+	"uptime-go/internal/models"
 
 	"github.com/spf13/viper"
 )
@@ -45,8 +45,8 @@ func (c *ConfigReader) setDefaults() {
 	c.viper.SetDefault("skip_ssl", false)
 }
 
-func (c *ConfigReader) ParseConfig() ([]*config.Monitor, error) {
-	var configList []*config.Monitor
+func (c *ConfigReader) ParseConfig() ([]*models.Monitor, error) {
+	var configList []*models.Monitor
 
 	// Get the monitor configurations
 	monitors := c.viper.Get("monitor")
@@ -61,7 +61,7 @@ func (c *ConfigReader) ParseConfig() ([]*config.Monitor, error) {
 			continue
 		}
 
-		config := &config.Monitor{}
+		config := &models.Monitor{}
 
 		// Get URL
 		if url, ok := monitor["url"].(string); ok {
