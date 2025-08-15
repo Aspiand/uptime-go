@@ -121,7 +121,6 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 	monitor.CertificateExpiredDate = result.SSLExpiredDate
 	monitor.Histories = []models.MonitorHistory{
 		{
-			ID:           models.GenerateRandomID(),
 			IsUp:         result.IsUp,
 			StatusCode:   result.StatusCode,
 			ResponseTime: responseTime,
@@ -158,7 +157,6 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.C
 	}
 
 	incident := &models.Incident{
-		ID:          models.GenerateRandomID(),
 		MonitorID:   monitor.ID,
 		Type:        incidentType,
 		Description: description,

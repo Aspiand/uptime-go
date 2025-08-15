@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"uptime-go/internal/configuration"
+	"uptime-go/internal/models"
 	"uptime-go/internal/monitor"
 	"uptime-go/internal/net/database"
 
@@ -65,6 +66,7 @@ func runMonitorMode() {
 	var urls []string
 
 	for _, r := range uptimeConfigs {
+		r.ID = models.GenerateRandomID()
 		urls = append(urls, r.URL)
 	}
 

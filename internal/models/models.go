@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"time"
 	"uptime-go/internal/net"
+
+	"gorm.io/gorm"
 )
 
 type IncidentType int
@@ -65,29 +67,23 @@ func (m *Monitor) ToNetworkConfig() *net.NetworkConfig {
 	}
 }
 
-func GenerateRandomID() string {
-	b := make([]byte, 4)
-	rand.Read(b)
-	return hex.EncodeToString(b)
-}
-
 // func (m *Monitor) BeforeCreate(tx *gorm.DB) (err error) {
 // 	m.ID = GenerateRandomID()
 
 // 	return nil
 // }
 
-// func (h *MonitorHistory) BeforeCreate(tx *gorm.DB) (err error) {
-// 	h.ID = GenerateRandomID()
+func (h *MonitorHistory) BeforeCreate(tx *gorm.DB) (err error) {
+	h.ID = GenerateRandomID()
 
-// 	return nil
-// }
+	return nil
+}
 
-// func (i *Incident) BeforeCreate(tx *gorm.DB) (err error) {
-// 	i.ID = GenerateRandomID()
+func (i *Incident) BeforeCreate(tx *gorm.DB) (err error) {
+	i.ID = GenerateRandomID()
 
-// 	return nil
-// }
+	return nil
+}
 
 func (e IncidentType) String() string {
 	switch e {
@@ -100,4 +96,10 @@ func (e IncidentType) String() string {
 	default:
 		return "Unknown error"
 	}
+}
+
+func GenerateRandomID() string {
+	b := make([]byte, 4)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }
