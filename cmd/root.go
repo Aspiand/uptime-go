@@ -40,7 +40,6 @@ func Execute() {
 }
 
 func init() {
-	// TODO: integrasikan langsung dengan viper
 	rootCmd.PersistentFlags().StringVarP(&configuration.Config.ConfigFile, "config", "c", "/etc/ojtguardian/plugins/uptime/config.yml", "Path to configuration file")
 	rootCmd.PersistentFlags().StringVarP(&configuration.Config.DBFile, "database", "", "/etc/ojtguardian/plugins/uptime/uptime.db", "Path to database file")
 }

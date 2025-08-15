@@ -3,7 +3,6 @@ package models
 import (
 	"time"
 	"uptime-go/internal/helper"
-	"uptime-go/internal/net"
 
 	"gorm.io/gorm"
 )
@@ -46,24 +45,13 @@ type MonitorHistory struct {
 }
 
 type Incident struct {
-	ID        string `json:"id" gorm:"primaryKey"`
-	MonitorID string `json:"monitor_id"`
-	// IncidentID  int          `json:"incident_id"` // incident id on master
+	ID          string       `json:"id" gorm:"primaryKey"`
+	MonitorID   string       `json:"monitor_id"`
 	Type        IncidentType `json:"type" gorm:"index"`
 	Description string       `json:"description"`
 	CreatedAt   time.Time    `json:"created_at"`
 	SolvedAt    *time.Time   `json:"solved_at" gorm:"index"`
 	Monitor     Monitor      `gorm:"foreignKey:MonitorID"`
-}
-
-func (m *Monitor) ToNetworkConfig() *net.NetworkConfig {
-	return &net.NetworkConfig{
-		URL:             m.URL,
-		RefreshInterval: m.Interval,
-		Timeout:         m.ResponseTimeThreshold,
-		// FollowRedirects: true,
-		SkipSSL: !m.CertificateMonitoring,
-	}
 }
 
 func (h *MonitorHistory) BeforeCreate(tx *gorm.DB) (err error) {

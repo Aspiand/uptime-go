@@ -28,21 +28,11 @@ func (cr *ConfigReader) ReadConfig(filePath string) error {
 	// Set the file type
 	cr.viper.SetConfigType("yaml")
 
-	// Set the environment variable prefix
-	cr.setDefaults()
-
 	if err := cr.viper.ReadInConfig(); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (c *ConfigReader) setDefaults() {
-	c.viper.SetDefault("timeout", "5s")
-	c.viper.SetDefault("refresh_interval", "10")
-	c.viper.SetDefault("follow_redirects", true)
-	c.viper.SetDefault("skip_ssl", false)
 }
 
 func (c *ConfigReader) ParseConfig() ([]*models.Monitor, error) {

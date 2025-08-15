@@ -19,10 +19,8 @@ var showTimeInLog bool
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Starts the continuous monitoring process for the configured websites",
-	Long: `The 'run' command is the core function of this application.
-It reads the list of websites from the configuration file,
-initializes the database, and begins a continuous, non-terminating
-process to check the uptime status of each site at regular intervals.
+	Long: `The 'run' command starts the monitoring service.
+It loads websites from the configuration and continuously checks their uptime.
 
 Use this command to start the monitoring service.
 Example:

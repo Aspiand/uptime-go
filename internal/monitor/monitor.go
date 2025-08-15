@@ -84,7 +84,14 @@ func (m *UptimeMonitor) monitorWebsite(cfg *models.Monitor) {
 }
 
 func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
-	result, err := monitor.ToNetworkConfig().CheckWebsite()
+	nc := &net.NetworkConfig{
+		URL:             monitor.URL,
+		RefreshInterval: monitor.Interval,
+		Timeout:         monitor.ResponseTimeThreshold,
+		SkipSSL:         !monitor.CertificateMonitoring,
+	}
+
+	result, err := nc.CheckWebsite()
 	if err != nil {
 		log.Printf("Error checking %s: %v", monitor.URL, err)
 		// Create a failed check result
@@ -206,7 +213,6 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 		return true
 	} else if !isSSLExpiringSoon && !lastSSLIncident.CreatedAt.IsZero() {
 		lastSSLIncident.SolvedAt = &now
-		// m.db.UpsertRecord(lastSSLIncident, "id")
 		m.db.Upsert(lastSSLIncident)
 		log.Printf("%s - SSL Updated\n", monitor.URL)
 		return true
