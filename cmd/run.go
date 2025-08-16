@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var showTimeInLog bool
+var noTimeInLog bool
 
 // runCmd represents the run command
 var runCmd = &cobra.Command{
@@ -89,5 +89,5 @@ func runMonitorMode() {
 
 func init() {
 	rootCmd.AddCommand(runCmd)
-	runCmd.Flags().BoolVar(&showTimeInLog, "no-time", false, "hide time in log")
+	runCmd.Flags().BoolVar(&noTimeInLog, "no-time", false, "hide time in log")
 }
