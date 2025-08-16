@@ -10,12 +10,14 @@ import (
 	"gorm.io/gorm"
 )
 
-type IncidentType int
+// TODO: move to incident package
+
+type IncidentType string
 
 const (
-	UnexpectedStatusCode IncidentType = iota
-	SSLExpired
-	Timeout
+	UnexpectedStatusCode IncidentType = "unexpected_status_code"
+	SSLExpired           IncidentType = "certificate_expired"
+	Timeout              IncidentType = "timeout"
 )
 
 type Monitor struct {
@@ -48,8 +50,9 @@ type MonitorHistory struct {
 }
 
 type Incident struct {
-	ID          string       `json:"id" gorm:"primaryKey"`
-	MonitorID   string       `json:"monitor_id"`
+	ID          string `json:"id" gorm:"primaryKey"`
+	MonitorID   string `json:"monitor_id"`
+	IncidentID  uint64
 	Type        IncidentType `json:"type" gorm:"index"`
 	Description string       `json:"description"`
 	CreatedAt   time.Time    `json:"created_at"`

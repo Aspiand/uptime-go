@@ -177,6 +177,8 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.C
 		monitor.URL, incident.Type.String(),
 	)
 
+	// TODO: notify here
+
 	return true, incidentType
 }
 
@@ -203,14 +205,27 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 		monitor.CertificateExpiredBefore != nil &&
 		time.Until(*result.SSLExpiredDate) <= *monitor.CertificateExpiredBefore
 
+	// TODO: check incident_id(master);
+	// if not exists, send
+	// tergantung pada berapa lama lagi waktu yang tersisa.
+	// jika melewati waktu yang ditentukan, akan warn
+	// jika kurang dari sama dengan 14 hari. high
+
+	// TODO: notify high here
+
 	if isSSLExpiringSoon && lastSSLIncident.CreatedAt.IsZero() {
 		log.Printf("%s - Please update SSL Certificate - [%s]", monitor.URL, result.SSLExpiredDate)
-		m.db.DB.Create(&models.Incident{
+		incident := &models.Incident{
 			ID:          helper.GenerateRandomID(),
 			MonitorID:   monitor.ID,
 			Type:        models.SSLExpired,
-			Description: fmt.Sprintf("SSL will be expired on %s", result.SSLExpiredDate),
-		})
+			Description: "Certificate almost expired",
+		}
+
+		// TODO: notify warn here
+
+		m.db.DB.Create(incident)
+
 		return true
 	} else if !isSSLExpiringSoon && !lastSSLIncident.CreatedAt.IsZero() {
 		lastSSLIncident.SolvedAt = &now
