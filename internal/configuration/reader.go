@@ -90,12 +90,13 @@ func (c *ConfigReader) ParseConfig() ([]*models.Monitor, error) {
 		}
 
 		// Get SSL expired before
+		// default 1 month
 		if sslExpired, ok := monitor["certificate_expired_before"].(string); ok {
-			expired := ParseDuration(sslExpired, "1M")
+			expired := ParseDuration(sslExpired, "31d")
 			config.CertificateExpiredBefore = &expired
 		} else {
-			expired := ParseDuration("1M", "1M")
-			config.CertificateExpiredBefore = &expired
+			duration := time.Duration(1) * 24 * time.Hour * 30
+			config.CertificateExpiredBefore = &duration
 		}
 
 		configList = append(configList, config)
@@ -105,7 +106,7 @@ func (c *ConfigReader) ParseConfig() ([]*models.Monitor, error) {
 }
 
 func ParseDuration(input string, defaultValue string) time.Duration {
-	re := regexp.MustCompile(`(\d+)([smhdM])`)
+	re := regexp.MustCompile(`(\d+)([smhd])`)
 	matches := re.FindAllStringSubmatch(input, -1)
 
 	if len(matches) == 0 {
@@ -127,8 +128,6 @@ func ParseDuration(input string, defaultValue string) time.Duration {
 			total += time.Duration(value) * time.Hour
 		case "d":
 			total += time.Duration(value) * 24 * time.Hour
-		case "M":
-			total += time.Duration(value) * 24 * time.Hour * 30
 		}
 	}
 

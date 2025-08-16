@@ -1,4 +1,4 @@
-# interval, response_time_threshold, certificate_expired_before: can be s(second)/m(minutes)/h(hour)/d(day)/M(month)
+# interval, response_time_threshold, certificate_expired_before: can be s(second)/m(minutes)/h(hour)/d(day)
 
 monitor:
   - url: "http://example.com"
@@ -6,4 +6,4 @@ monitor:
     interval: 5m
     response_time_threshold: 5s
     certificate_monitoring: true
-    certificate_expired_before: 1M
+    certificate_expired_before: 31d
