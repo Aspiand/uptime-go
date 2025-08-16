@@ -26,7 +26,7 @@ Use this command to start the monitoring service.
 Example:
   uptime-go run --config /path/to/your/config.yml`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if showTimeInLog {
+		if noTimeInLog {
 			log.SetFlags(0)
 		}
 
