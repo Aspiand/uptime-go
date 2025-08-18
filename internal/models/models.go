@@ -6,18 +6,9 @@ import (
 	"log"
 	"time"
 	"uptime-go/internal/helper"
+	"uptime-go/internal/incident"
 
 	"gorm.io/gorm"
-)
-
-// TODO: move to incident package
-
-type IncidentType string
-
-const (
-	UnexpectedStatusCode IncidentType = "unexpected_status_code"
-	SSLExpired           IncidentType = "certificate_expired"
-	Timeout              IncidentType = "timeout"
 )
 
 type Monitor struct {
@@ -50,14 +41,14 @@ type MonitorHistory struct {
 }
 
 type Incident struct {
-	ID          string `json:"id" gorm:"primaryKey"`
-	MonitorID   string `json:"monitor_id"`
-	IncidentID  uint64
-	Type        IncidentType `json:"type" gorm:"index"`
-	Description string       `json:"description"`
-	CreatedAt   time.Time    `json:"created_at"`
-	SolvedAt    *time.Time   `json:"solved_at" gorm:"index"`
-	Monitor     Monitor      `gorm:"foreignKey:MonitorID"`
+	ID          string        `json:"id" gorm:"primaryKey"`
+	MonitorID   string        `json:"monitor_id"`
+	IncidentID  uint64        `json:"-"`
+	Type        incident.Type `json:"type" gorm:"index"`
+	Description string        `json:"description"`
+	CreatedAt   time.Time     `json:"created_at"`
+	SolvedAt    *time.Time    `json:"solved_at" gorm:"index"`
+	Monitor     Monitor       `gorm:"foreignKey:MonitorID"`
 }
 
 type Response struct {
@@ -69,19 +60,6 @@ func (h *MonitorHistory) BeforeCreate(tx *gorm.DB) (err error) {
 	h.ID = helper.GenerateRandomID()
 
 	return nil
-}
-
-func (e IncidentType) String() string {
-	switch e {
-	case Timeout:
-		return "Timeout occurred"
-	case SSLExpired:
-		return "SSL certificate expired"
-	case UnexpectedStatusCode:
-		return "Unexpected status code"
-	default:
-		return "Unknown error"
-	}
 }
 
 func (r Response) Print() {

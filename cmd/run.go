@@ -59,6 +59,11 @@ func runMonitorMode() {
 		os.Exit(ExitErrorConfig)
 	}
 
+	if len(uptimeConfigs) == 0 {
+		fmt.Fprintln(os.Stderr, "No valid website configurations found in config file")
+		os.Exit(ExitErrorConfig)
+	}
+
 	var urls []string
 
 	for _, r := range uptimeConfigs {

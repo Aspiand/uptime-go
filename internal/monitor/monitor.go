@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"uptime-go/internal/helper"
+	"uptime-go/internal/incident"
 	"uptime-go/internal/models"
 	"uptime-go/internal/net"
 	"uptime-go/internal/net/database"
@@ -107,8 +108,8 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 
 	statusText := "UP"
 	if result.IsUp {
-		m.resolveIncidents(monitor, models.UnexpectedStatusCode)
-		m.resolveIncidents(monitor, models.Timeout)
+		m.resolveIncidents(monitor, incident.UnexpectedStatusCode)
+		m.resolveIncidents(monitor, incident.Timeout)
 		m.handleSSL(monitor, result)
 
 		if monitor.LastUp == nil {
@@ -143,16 +144,16 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 	}
 }
 
-func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.CheckResults, err error) (bool, models.IncidentType) {
+func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.CheckResults, err error) (bool, incident.Type) {
 	// return true if new incident created; else false and incident type
 
 	var description string
-	incidentType := models.UnexpectedStatusCode
+	incidentType := incident.UnexpectedStatusCode
 
 	if err != nil {
 		description = err.Error()
 		if os.IsTimeout(err) {
-			incidentType = models.Timeout
+			incidentType = incident.Timeout
 			result.ResponseTime = monitor.ResponseTimeThreshold
 		}
 	} else {
@@ -174,7 +175,7 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.C
 	m.db.DB.Create(incident)
 	log.Printf(
 		"%s - New Incident detected! - Type: %s",
-		monitor.URL, incident.Type.String(),
+		monitor.URL, incident.Type,
 	)
 
 	// TODO: notify here
@@ -182,7 +183,7 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.C
 	return true, incidentType
 }
 
-func (m *UptimeMonitor) resolveIncidents(monitor *models.Monitor, incidentType models.IncidentType) bool {
+func (m *UptimeMonitor) resolveIncidents(monitor *models.Monitor, incidentType incident.Type) bool {
 	// return true if incident solved; else false
 
 	now := time.Now()
@@ -190,7 +191,7 @@ func (m *UptimeMonitor) resolveIncidents(monitor *models.Monitor, incidentType m
 	if !lastIncident.CreatedAt.IsZero() {
 		lastIncident.SolvedAt = &now
 		m.db.Upsert(lastIncident)
-		log.Printf("%s - Incident Solved - Type: %s - Downtime: %s\n", monitor.URL, incidentType.String(), time.Since(lastIncident.CreatedAt))
+		log.Printf("%s - Incident Solved - Type: %s - Downtime: %s\n", monitor.URL, incidentType, time.Since(lastIncident.CreatedAt))
 		return true
 	}
 
@@ -199,7 +200,7 @@ func (m *UptimeMonitor) resolveIncidents(monitor *models.Monitor, incidentType m
 
 func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResults) bool {
 	now := time.Now()
-	lastSSLIncident := m.db.GetLastIncident(monitor.URL, models.SSLExpired)
+	lastSSLIncident := m.db.GetLastIncident(monitor.URL, incident.SSLExpired)
 
 	isSSLExpiringSoon := result.SSLExpiredDate != nil &&
 		monitor.CertificateExpiredBefore != nil &&
@@ -218,7 +219,7 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 		incident := &models.Incident{
 			ID:          helper.GenerateRandomID(),
 			MonitorID:   monitor.ID,
-			Type:        models.SSLExpired,
+			Type:        incident.SSLExpired,
 			Description: "Certificate almost expired",
 		}
 

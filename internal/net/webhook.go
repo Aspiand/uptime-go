@@ -13,57 +13,36 @@ import (
 	"uptime-go/internal/models"
 )
 
-type incidentCreateResponse struct {
-	Message string
+// incidentResponse defines the structure for the response after creating/updating an incident.
+type incidentResponse struct {
+	Message string `json:"message"`
 	Data    struct {
 		ID uint64 `json:"incident_id"`
 	} `json:"data"`
 }
 
-type incidentUpdateStatusResponse struct{}
-
-func NotifyIncident(incident *models.Incident, severity incident.Severity) uint64 {
-	// TODO: improve thos function
-
-	if incident.Monitor.CreatedAt.IsZero() {
-		// TODO: handle
-		return 0
+// sendRequest is a helper function to create and send HTTP requests.
+func sendRequest(method string, url string, payload any) (*http.Response, []byte, error) {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
 	}
 
 	reader := configuration.NewConfigReader()
 	reader.ReadConfig(configuration.MAIN_CONFIG)
 	token := reader.GetServerToken()
 
-	client := &http.Client{
-		Timeout: 10 * time.Second,
+	var body []byte
+	var err error
+	if payload != nil {
+		body, err = json.Marshal(payload)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to marshal request payload: %w", err)
+		}
 	}
 
-	payload, err := json.Marshal(map[string]any{
-		"server_ip": GetIPAddress(),
-		"module":    "fim",
-		"severity":  string(severity),
-		"message":   incident.Description,
-		"event":     "uptime_" + incident.Type,
-		"tags":      []string{"uptime", "monitoring"},
-		"attributes": map[string]any{
-			"expired_date": incident.Monitor.CertificateExpiredDate,
-		},
-	})
-
-	// fmt.Println(string(payload))
-
+	request, err := http.NewRequest(method, url, bytes.NewBuffer(body))
 	if err != nil {
-		log.Print("failed to send incident")
-		log.Printf("incident id: %s", incident.ID)
-		log.Printf("incident master id: %d", incident.IncidentID)
-	}
-
-	request, err := http.NewRequest(
-		"POST", configuration.INCIDNET_CREATE_URL, bytes.NewBuffer(payload),
-	)
-	if err != nil {
-		log.Printf("Error creating request for %s: %v", configuration.INCIDNET_CREATE_URL, err)
-		return 0
+		return nil, nil, fmt.Errorf("error creating request for %s: %w", url, err)
 	}
 
 	request.Header.Set("Authorization", "Bearer "+token)
@@ -71,78 +50,93 @@ func NotifyIncident(incident *models.Incident, severity incident.Severity) uint6
 
 	response, err := client.Do(request)
 	if err != nil {
-		// TODO: handle
-		return 0
+		return nil, nil, fmt.Errorf("failed to send request to %s: %w", url, err)
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != 201 {
-		// TODO: handle
+	respBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		return response, nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	// Decode body
-	var result incidentCreateResponse
-	body, _ := io.ReadAll(response.Body)
-
-	if err := json.Unmarshal(body, &result); err != nil {
-		// TODO: handle
-		fmt.Println(err)
-		return 0
-	}
-
-	return result.Data.ID
+	return response, respBody, nil
 }
 
-func UpdateIncidentStatus(incident *models.Incident, status incident.Status) {
-	reader := configuration.NewConfigReader()
-	reader.ReadConfig(configuration.MAIN_CONFIG)
-	token := reader.GetServerToken()
-
-	client := &http.Client{
-		Timeout: 10 * time.Second,
+// NotifyIncident sends a notification about a new incident to the central server.
+func NotifyIncident(incident *models.Incident, severity incident.Severity) (uint64, error) {
+	if incident.Monitor.CreatedAt.IsZero() {
+		return 0, fmt.Errorf("incident monitor data is not properly initialized")
 	}
 
-	payload, err := json.Marshal(map[string]any{
-		"status": status,
-	})
+	payload := struct {
+		ServerIP   string         `json:"server_ip"`
+		Module     string         `json:"module"`
+		Severity   string         `json:"severity"`
+		Message    string         `json:"message"`
+		Event      string         `json:"event"`
+		Tags       []string       `json:"tags"`
+		Attributes map[string]any `json:"attributes"`
+	}{
+		ServerIP: GetIPAddress(),
+		Module:   "fim",
+		Severity: string(severity),
+		Message:  incident.Description,
+		Event:    "uptime_" + string(incident.Type),
+		Tags:     []string{"uptime", "monitoring"},
+		Attributes: map[string]any{
+			"expired_date": incident.Monitor.CertificateExpiredDate,
+		},
+	}
 
+	response, body, err := sendRequest("POST", configuration.INCIDENT_CREATE_URL, payload)
 	if err != nil {
-		log.Print("[webhook] failed to update incident status!")
-		log.Printf("[webhook] incident id: %s", incident.ID)
-		log.Printf("[webhook] incident master id: %d", incident.IncidentID)
+		log.Printf("[webhook] Failed to send incident notification for %s: %v", incident.Monitor.URL, err)
+		return 0, err
 	}
 
-	request, err := http.NewRequest(
-		"POST", configuration.GetIncidentStatusURL(incident.IncidentID),
-		bytes.NewBuffer(payload),
-	)
-	if err != nil {
-		log.Printf("[webhook] Error creating request for %s: %v", configuration.INCIDNET_CREATE_URL, err)
-		return
+	if response.StatusCode != http.StatusCreated {
+		err := fmt.Errorf("failed to create incident, received status code %d. Body: %s", response.StatusCode, string(body))
+		log.Printf("[webhook] %v", err)
+		return 0, err
 	}
 
-	request.Header.Set("Authorization", "Bearer "+token)
-	request.Header.Set("Content-Type", "application/json")
-
-	response, err := client.Do(request)
-	if err != nil {
-		// TODO: handle
-		return
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != 200 {
-		// TODO: handle
-	}
-
-	// Decode body
-	var result incidentUpdateStatusResponse
-	body, _ := io.ReadAll(response.Body)
-
+	var result incidentResponse
 	if err := json.Unmarshal(body, &result); err != nil {
-		// TODO: handle
-		fmt.Println(err)
+		err := fmt.Errorf("failed to decode incident response body: %w. Body: %s", err, string(body))
+		log.Printf("[webhook] %v", err)
+		return 0, err
 	}
 
-	fmt.Println(result)
+	log.Printf("[webhook] Successfully created incident for monitor %s. Incident Master ID: %d", incident.Monitor.URL, result.Data.ID)
+	return result.Data.ID, nil
+}
+
+// UpdateIncidentStatus updates the status of an existing incident on the central server.
+func UpdateIncidentStatus(incident *models.Incident, status incident.Status) error {
+	payload := struct {
+		Status string `json:"status"`
+	}{Status: string(status)}
+
+	url := configuration.GetIncidentStatusURL(incident.IncidentID)
+	response, body, err := sendRequest("POST", url, payload)
+	if err != nil {
+		log.Printf("[webhook] Failed to send status update for incident %d: %v", incident.IncidentID, err)
+		return err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		err := fmt.Errorf("failed to update incident status, received status code %d. Body: %s", response.StatusCode, string(body))
+		log.Printf("[webhook] %v", err)
+		return err
+	}
+
+	var result incidentResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		err := fmt.Errorf("failed to decode update status response body: %w. Body: %s", err, string(body))
+		log.Printf("[webhook] %v", err)
+		return err
+	}
+
+	log.Printf("[webhook] Successfully updated status for incident %d to '%s'. Message: %s", incident.IncidentID, status, result.Message)
+	return nil
 }

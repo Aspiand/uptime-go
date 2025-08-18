@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 	"uptime-go/internal/configuration"
+	"uptime-go/internal/incident"
 	"uptime-go/internal/models"
 
 	"github.com/glebarez/sqlite"
@@ -116,7 +117,7 @@ func (db *Database) Upsert(record any) error {
 	return db.UpsertRecord(record, "id")
 }
 
-func (db *Database) GetLastIncident(url string, incidentType models.IncidentType) *models.Incident {
+func (db *Database) GetLastIncident(url string, incidentType incident.Type) *models.Incident {
 	var incident models.Incident
 
 	db.mutex.RLock()
