@@ -54,6 +54,10 @@ With a URL flag, it provides a detailed report for the specified site, including
 			os.Exit(1)
 		}
 
+		for i, j := 0, len(monitor.Histories)-1; i < j; i, j = i+1, j-1 {
+			monitor.Histories[i], monitor.Histories[j] = monitor.Histories[j], monitor.Histories[i]
+		}
+
 		output, err := json.Marshal(monitor)
 		if err != nil {
 			fmt.Printf("%s: error while encoding result\n", domainURL)
