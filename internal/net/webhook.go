@@ -63,7 +63,7 @@ func sendRequest(method string, url string, payload any) (*http.Response, []byte
 }
 
 // NotifyIncident sends a notification about a new incident to the central server.
-func NotifyIncident(incident *models.Incident, severity incident.Severity) (uint64, error) {
+func NotifyIncident(incident *models.Incident, severity incident.Severity, attributes map[string]any) (uint64, error) {
 	if incident.Monitor.CreatedAt.IsZero() {
 		return 0, fmt.Errorf("incident monitor data is not properly initialized")
 	}
@@ -75,17 +75,15 @@ func NotifyIncident(incident *models.Incident, severity incident.Severity) (uint
 		Message    string         `json:"message"`
 		Event      string         `json:"event"`
 		Tags       []string       `json:"tags"`
-		Attributes map[string]any `json:"attributes"`
+		Attributes map[string]any `json:"attributes,omitempty"`
 	}{
-		ServerIP: GetIPAddress(),
-		Module:   "fim",
-		Severity: string(severity),
-		Message:  incident.Description,
-		Event:    "uptime_" + string(incident.Type),
-		Tags:     []string{"uptime", "monitoring"},
-		Attributes: map[string]any{
-			"expired_date": incident.Monitor.CertificateExpiredDate,
-		},
+		ServerIP:   GetIPAddress(),
+		Module:     "fim",
+		Severity:   string(severity),
+		Message:    incident.Description,
+		Event:      "uptime_" + string(incident.Type),
+		Tags:       []string{"uptime", "monitoring"},
+		Attributes: attributes,
 	}
 
 	response, body, err := sendRequest("POST", configuration.INCIDENT_CREATE_URL, payload)

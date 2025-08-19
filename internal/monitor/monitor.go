@@ -165,20 +165,23 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.C
 		return false, incidentType // Incident already recorded
 	}
 
-	incident := &models.Incident{
+	inc := &models.Incident{
 		ID:          helper.GenerateRandomID(),
 		MonitorID:   monitor.ID,
 		Type:        incidentType,
 		Description: description,
+		Monitor:     *monitor,
 	}
 
-	m.db.DB.Create(incident)
+	if id, err := net.NotifyIncident(inc, incident.HIGH, nil); err == nil {
+		inc.IncidentID = id
+	}
+
+	m.db.DB.Create(inc)
 	log.Printf(
 		"%s - New Incident detected! - Type: %s",
-		monitor.URL, incident.Type,
+		monitor.URL, inc.Type,
 	)
-
-	// TODO: notify here
 
 	return true, incidentType
 }
@@ -192,6 +195,8 @@ func (m *UptimeMonitor) resolveIncidents(monitor *models.Monitor, incidentType i
 		lastIncident.SolvedAt = &now
 		m.db.Upsert(lastIncident)
 		log.Printf("%s - Incident Solved - Type: %s - Downtime: %s\n", monitor.URL, incidentType, time.Since(lastIncident.CreatedAt))
+		net.UpdateIncidentStatus(lastIncident, incident.Resolved)
+
 		return true
 	}
 
@@ -206,26 +211,25 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 		monitor.CertificateExpiredBefore != nil &&
 		time.Until(*result.SSLExpiredDate) <= *monitor.CertificateExpiredBefore
 
-	// TODO: check incident_id(master);
-	// if not exists, send
-	// tergantung pada berapa lama lagi waktu yang tersisa.
-	// jika melewati waktu yang ditentukan, akan warn
-	// jika kurang dari sama dengan 14 hari. high
-
-	// TODO: notify high here
-
 	if isSSLExpiringSoon && lastSSLIncident.CreatedAt.IsZero() {
 		log.Printf("%s - Please update SSL Certificate - [%s]", monitor.URL, result.SSLExpiredDate)
-		incident := &models.Incident{
+		inc := &models.Incident{
 			ID:          helper.GenerateRandomID(),
 			MonitorID:   monitor.ID,
 			Type:        incident.SSLExpired,
 			Description: "Certificate almost expired",
+			Monitor:     *monitor,
 		}
 
-		// TODO: notify warn here
+		attr := map[string]any{
+			"expired_date": result.SSLExpiredDate,
+		}
 
-		m.db.DB.Create(incident)
+		if id, err := net.NotifyIncident(inc, incident.INFO, attr); err == nil {
+			inc.IncidentID = id
+		}
+
+		m.db.DB.Create(inc)
 
 		return true
 	} else if !isSSLExpiringSoon && !lastSSLIncident.CreatedAt.IsZero() {
