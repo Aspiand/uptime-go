@@ -24,6 +24,7 @@ type Monitor struct {
 	ResponseTime             *int64           `json:"response_time"`
 	CertificateExpiredDate   *time.Time       `json:"certificate_expired_date"`
 	LastUp                   *time.Time       `json:"last_up"`
+	LastDown                 *time.Time       `json:"last_down"`
 	CreatedAt                time.Time        `json:"-"`
 	UpdatedAt                time.Time        `json:"last_check"`
 	Histories                []MonitorHistory `json:"histories,omitempty" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`

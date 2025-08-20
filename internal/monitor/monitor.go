@@ -111,14 +111,8 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 		m.resolveIncidents(monitor, incident.UnexpectedStatusCode)
 		m.resolveIncidents(monitor, incident.Timeout)
 		m.handleSSL(monitor, result)
-
-		if monitor.LastUp == nil {
-			now := time.Now()
-			monitor.LastUp = &now
-		}
 	} else {
 		statusText = "DOWN"
-		monitor.LastUp = nil
 		m.handleWebsiteDown(monitor, result, err)
 	}
 
@@ -177,6 +171,8 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.C
 		inc.IncidentID = id
 	}
 
+	now := time.Now()
+	monitor.LastDown = &now
 	m.db.DB.Create(inc)
 	log.Printf(
 		"%s - New Incident detected! - Type: %s",
@@ -193,6 +189,7 @@ func (m *UptimeMonitor) resolveIncidents(monitor *models.Monitor, incidentType i
 	lastIncident := m.db.GetLastIncident(monitor.URL, incidentType)
 	if !lastIncident.CreatedAt.IsZero() {
 		lastIncident.SolvedAt = &now
+		monitor.LastUp = &now
 		m.db.Upsert(lastIncident)
 		log.Printf("%s - Incident Solved - Type: %s - Downtime: %s\n", monitor.URL, incidentType, time.Since(lastIncident.CreatedAt))
 		net.UpdateIncidentStatus(lastIncident, incident.Resolved)
