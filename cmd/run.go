@@ -79,7 +79,14 @@ func runMonitorMode() {
 	}
 
 	// Merge config
-	db.UpsertRecord(uptimeConfigs, "url")
+	db.UpsertRecord(uptimeConfigs, "url", &[]string{
+		"url",
+		"enabled",
+		"response_time_threshold",
+		"interval",
+		"certificate_monitoring",
+		"certificate_expired_before",
+	})
 	db.DB.Where("url IN ?", urls).Find(&uptimeConfigs)
 
 	// Initialize and start monitor

@@ -96,17 +96,24 @@ func InitializeTestDatabase() (*Database, error) {
 	return &Database{DB: db}, nil
 }
 
-func (db *Database) UpsertRecord(record any, column string) error {
+func (db *Database) UpsertRecord(record any, column string, updateColumn *[]string) error {
 	// Create record if not exists else update
 
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
+	stmt := clause.OnConflict{
+		Columns:   []clause.Column{{Name: column}},
+		UpdateAll: true,
+	}
+
+	if updateColumn != nil {
+		stmt.UpdateAll = false
+		stmt.DoUpdates = clause.AssignmentColumns(*updateColumn)
+	}
+
 	return db.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: column}},
-			UpdateAll: true,
-		}).Create(record).Error; err != nil {
+		if err := tx.Clauses(stmt).Create(record).Error; err != nil {
 			return fmt.Errorf("failed to save record: %w", err)
 		}
 		return nil
@@ -114,7 +121,7 @@ func (db *Database) UpsertRecord(record any, column string) error {
 }
 
 func (db *Database) Upsert(record any) error {
-	return db.UpsertRecord(record, "id")
+	return db.UpsertRecord(record, "id", nil)
 }
 
 func (db *Database) GetLastIncident(url string, incidentType incident.Type) *models.Incident {
