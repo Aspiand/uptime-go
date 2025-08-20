@@ -72,6 +72,12 @@ func NotifyIncident(incident *models.Incident, severity incident.Severity, attri
 		return 0, fmt.Errorf("incident monitor data is not properly initialized")
 	}
 
+	ipAddress, err := GetIPAddress()
+	if err != nil {
+		log.Printf("[webhook] Failed to send incident notification for %s: failed to get server ip address %v", incident.Monitor.URL, err)
+		return 0, err
+	}
+
 	payload := struct {
 		ServerIP   string         `json:"server_ip"`
 		Module     string         `json:"module"`
@@ -81,7 +87,7 @@ func NotifyIncident(incident *models.Incident, severity incident.Severity, attri
 		Tags       []string       `json:"tags"`
 		Attributes map[string]any `json:"attributes,omitempty"`
 	}{
-		ServerIP:   GetIPAddress(),
+		ServerIP:   ipAddress,
 		Module:     "fim",
 		Severity:   string(severity),
 		Message:    incident.Description,
@@ -115,6 +121,10 @@ func NotifyIncident(incident *models.Incident, severity incident.Severity, attri
 
 // UpdateIncidentStatus updates the status of an existing incident on the central server.
 func UpdateIncidentStatus(incident *models.Incident, status incident.Status) error {
+	if incident.IncidentID == 0 {
+		log.Printf("[webhook] Failed to update incident status for %s: incident_id not set", incident.ID)
+	}
+
 	payload := struct {
 		Status string `json:"status"`
 	}{Status: string(status)}

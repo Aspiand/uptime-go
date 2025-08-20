@@ -5,11 +5,11 @@ type Status string
 type Type string
 
 const (
-	INFO     = "INFO"
-	LOW      = "LOW"
-	MEDIUM   = "MEDIUM"
-	HIGH     = "HIGH"
-	CRITICAL = "CRITICAL"
+	INFO     Severity = "INFO"
+	LOW      Severity = "LOW"
+	MEDIUM   Severity = "MEDIUM"
+	HIGH     Severity = "HIGH"
+	CRITICAL Severity = "CRITICAL"
 )
 
 const (
