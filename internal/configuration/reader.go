@@ -113,7 +113,7 @@ func (c *ConfigReader) GetServerToken() string {
 
 	token, ok := auth["token"].(string)
 	if !ok {
-		log.Println("invalid server token")
+		return ""
 	}
 
 	return token

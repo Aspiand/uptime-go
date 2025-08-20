@@ -30,6 +30,10 @@ func sendRequest(method string, url string, payload any) (*http.Response, []byte
 	reader := configuration.NewConfigReader()
 	reader.ReadConfig(configuration.MAIN_CONFIG)
 	token := reader.GetServerToken()
+	if token == "" {
+		log.Printf("[webhook] invalid server token")
+		return nil, nil, fmt.Errorf("error creating request for %s: invalid server token", url)
+	}
 
 	var body []byte
 	var err error
