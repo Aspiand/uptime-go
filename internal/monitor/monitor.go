@@ -107,7 +107,12 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 	}
 
 	statusText := "UP"
+	now := time.Now()
 	if result.IsUp {
+		if monitor.LastUp == nil {
+			monitor.LastUp = &now
+		}
+
 		m.resolveIncidents(monitor, incident.UnexpectedStatusCode)
 		m.resolveIncidents(monitor, incident.Timeout)
 		m.handleSSL(monitor, result)
