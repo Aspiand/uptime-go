@@ -13,12 +13,12 @@ import (
 
 type MonitorConfig struct {
 	Monitor []struct {
-		URL                      string `json:"url"`
-		Enabled                  bool   `json:"enabled"`
-		ResponseTimeThreshold    string `json:"response_time_threshold"`
-		Interval                 string `json:"interval"`
-		CertificateMonitoring    bool   `json:"certificate_monitoring"`
-		CertificateExpiredBefore string `json:"certificate_expired_before"`
+		URL                      string `json:"url" yaml:"url"`
+		Enabled                  bool   `json:"enabled" yaml:"enabled"`
+		ResponseTimeThreshold    string `json:"response_time_threshold" yaml:"response_time_threshold"`
+		Interval                 string `json:"interval" yaml:"interval"`
+		CertificateMonitoring    bool   `json:"certificate_monitoring" yaml:"certificate_monitoring"`
+		CertificateExpiredBefore string `json:"certificate_expired_before" yaml:"certificate_expired_before"`
 	} `json:"monitor"`
 }
 
@@ -50,6 +50,8 @@ var setConfigCmd = &cobra.Command{
 			}.Print()
 			os.Exit(1)
 		}
+
+		fmt.Fprint(os.Stderr, yamlConfig)
 
 		err = os.WriteFile(configuration.Config.ConfigFile, yamlConfig, 0644)
 		if err != nil {
