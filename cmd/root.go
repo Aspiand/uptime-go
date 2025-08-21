@@ -40,6 +40,6 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&configuration.Config.ConfigFile, "config", "c", "/etc/ojtguardian/plugins/uptime/config.yml", "Path to configuration file")
-	rootCmd.PersistentFlags().StringVarP(&configuration.Config.DBFile, "database", "", "/etc/ojtguardian/plugins/uptime/uptime.db", "Path to database file")
+	rootCmd.PersistentFlags().StringVarP(&configuration.Config.ConfigFile, "config", "c", configuration.CONFIG_PATH, "Path to configuration file")
+	rootCmd.PersistentFlags().StringVarP(&configuration.Config.DBFile, "database", "", configuration.DB_PATH, "Path to database file")
 }

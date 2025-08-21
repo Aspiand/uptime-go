@@ -28,7 +28,7 @@ func sendRequest(method string, url string, payload any) (*http.Response, []byte
 	}
 
 	reader := configuration.NewConfigReader()
-	reader.ReadConfig(configuration.MAIN_CONFIG)
+	reader.ReadConfig(configuration.OJTGUARDIAN_CONFIG)
 	token := reader.GetServerToken()
 	if token == "" {
 		log.Printf("[webhook] invalid server token")
