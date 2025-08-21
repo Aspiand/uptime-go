@@ -6,7 +6,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"uptime-go/internal/configuration"
 
@@ -33,7 +32,7 @@ Usage: uptime-go [--config=path/to/uptime.yaml] run`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 
 		// Create the directory if it doesn't exist
-		if err := os.MkdirAll(filepath.Dir(configuration.PLUGIN_PATH), 0755); err != nil {
+		if err := os.MkdirAll(configuration.PLUGIN_PATH, 0755); err != nil {
 			fmt.Printf("failed to create directory: %v", err)
 			return err
 		}
