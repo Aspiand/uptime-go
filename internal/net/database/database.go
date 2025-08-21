@@ -3,7 +3,6 @@ package database
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 	"uptime-go/internal/configuration"
@@ -22,11 +21,6 @@ type Database struct {
 
 func InitializeDatabase() (*Database, error) {
 	DBPath := configuration.Config.DBFile
-
-	// Create the directory if it doesn't exist
-	if err := os.MkdirAll(filepath.Dir(DBPath), 0755); err != nil {
-		return nil, fmt.Errorf("failed to create directory: %w", err)
-	}
 
 	// Check if the database file exists, if not create it
 	if _, err := os.Stat(DBPath); os.IsNotExist(err) {
