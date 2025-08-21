@@ -236,6 +236,10 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 		return true
 	} else if !isSSLExpiringSoon && !lastSSLIncident.CreatedAt.IsZero() {
 		lastSSLIncident.SolvedAt = &now
+		if lastSSLIncident.IncidentID != 0 {
+			net.UpdateIncidentStatus(lastSSLIncident, incident.Resolved)
+		}
+
 		m.db.Upsert(lastSSLIncident)
 		log.Printf("%s - SSL Updated\n", monitor.URL)
 		return true
