@@ -24,7 +24,8 @@ func ParseDuration(input string, defaultValue string) time.Duration {
 	matches := re.FindAllStringSubmatch(input, -1)
 
 	if len(matches) == 0 && defaultValue != "" {
-		log.Printf("invalid duration string: %s", input)
+		log.Printf("[helper] invalid duration string: '%s'", input)
+		log.Printf("[helper] using default value: %s", defaultValue)
 		return ParseDuration(defaultValue, "")
 	}
 

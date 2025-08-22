@@ -2,7 +2,13 @@ package configuration
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"uptime-go/internal/helper"
 	"uptime-go/internal/models"
+
+	"github.com/spf13/viper"
 )
 
 const (
@@ -47,4 +53,67 @@ func GetIncidentCreateURL() string {
 
 func GetIncidentStatusURL(id uint64) string {
 	return fmt.Sprintf("%s/api/v1/incidents/%d/update-status", Config.Main.MasterHost, id)
+}
+
+func Load() error {
+	// Create the directory if it doesn't exist
+	if err := os.MkdirAll(PLUGIN_PATH, 0755); err != nil {
+		fmt.Printf("failed to create directory: %v", err)
+		return err
+	}
+
+	// Load main config
+	vMain := viper.New()
+	vMain.SetConfigFile(OJTGUARDIAN_CONFIG)
+	vMain.SetConfigType("yaml")
+	if err := vMain.ReadInConfig(); err != nil {
+		return err
+	}
+
+	if err := vMain.Unmarshal(&Config.Main); err != nil {
+		return err
+	}
+
+	// Ensure monitor config file is absolute
+	if !filepath.IsAbs(Config.ConfigFile) {
+		absPath, err := filepath.Abs(Config.ConfigFile)
+		if err == nil {
+			Config.ConfigFile = absPath
+		}
+	}
+
+	// Load monitor config
+	vMonitor := viper.New()
+	vMonitor.SetConfigFile(Config.ConfigFile)
+	vMonitor.SetConfigType("yaml")
+	if err := vMonitor.ReadInConfig(); err != nil {
+		return err
+	}
+
+	if err := vMonitor.UnmarshalKey("monitor", &Config.MonitorConfig); err != nil {
+		return err
+	}
+
+	// Parse
+	for _, monitor := range Config.MonitorConfig {
+		if monitor.URL == "" {
+			log.Print("[config] found record with empty url")
+			continue
+		}
+
+		interval := helper.ParseDuration(monitor.Interval, "5m")
+		timeout := helper.ParseDuration(monitor.ResponseTimeThreshold, "10s")
+		certificateExpiredBefore := helper.ParseDuration(monitor.CertificateExpiredBefore, "31d")
+
+		Config.Monitor = append(Config.Monitor, &models.Monitor{
+			URL:                      monitor.URL,
+			Enabled:                  monitor.Enabled,
+			Interval:                 interval,
+			ResponseTimeThreshold:    timeout,
+			CertificateMonitoring:    monitor.CertificateMonitoring,
+			CertificateExpiredBefore: &certificateExpiredBefore,
+		})
+	}
+
+	return nil
 }

@@ -26,7 +26,7 @@ func TestParseDurationMinutes(t *testing.T) {
 }
 
 func TestParseDurationDefault(t *testing.T) {
-	result := ParseDuration("19 juta lapangan kerja", "19s")
+	result := ParseDuration("19M", "19s")
 
 	assert.Equal(t, result, time.Duration(19)*time.Second)
 }
