@@ -38,9 +38,9 @@ changelog:
       - "^ci:"
 
 release:
-  github:
-    owner: genbucyber
-    name: uptime-go
+  # github:
+  #   owner: genbucyber
+  #   name: uptime-go
 
   prerelease: auto
 
