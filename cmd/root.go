@@ -1,10 +1,6 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"uptime-go/internal/configuration"
@@ -30,14 +26,7 @@ It provides continuous monitoring of websites defined in the configuration file.
 Usage: uptime-go [--config=path/to/uptime.yaml] run`,
 	Args: cobra.NoArgs,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-
-		// Create the directory if it doesn't exist
-		if err := os.MkdirAll(configuration.PLUGIN_PATH, 0755); err != nil {
-			fmt.Printf("failed to create directory: %v", err)
-			return err
-		}
-
-		return nil
+		return configuration.Load()
 	},
 }
 
