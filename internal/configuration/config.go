@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	VERSION            = "0.1.1"
+	VERSION            = "0.1.2"
 	OJTGUARDIAN_PATH   = "/etc/ojtguardian"
 	OJTGUARDIAN_CONFIG = OJTGUARDIAN_PATH + "/main.yml"
 	PLUGIN_PATH        = "/etc/ojtguardian/plugins/uptime"
