@@ -87,8 +87,24 @@ func Load() error {
 	vMonitor := viper.New()
 	vMonitor.SetConfigFile(Config.ConfigFile)
 	vMonitor.SetConfigType("yaml")
+
 	if err := vMonitor.ReadInConfig(); err != nil {
-		return err
+		if !os.IsNotExist(err) {
+			return err
+		}
+
+		vMonitor.Set("monitor", []MonitorConfig{
+			{
+				URL:                   "https://genbucyber.com",
+				Enabled:               true,
+				Interval:              "5m",
+				ResponseTimeThreshold: "10s",
+			},
+		})
+
+		if err := vMonitor.WriteConfig(); err != nil {
+			return err
+		}
 	}
 
 	if err := vMonitor.UnmarshalKey("monitor", &Config.MonitorConfig); err != nil {
