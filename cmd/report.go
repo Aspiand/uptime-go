@@ -21,13 +21,7 @@ var reportCmd = &cobra.Command{
 Without a URL flag, it reports all monitored sites.
 With a URL flag, it provides a detailed report for the specified site, including the last 100 history records.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		db, err := database.InitializeDatabase()
-		if err != nil {
-			models.Response{
-				Message: "failed to initialize sqlite database",
-			}.Print()
-			os.Exit(ExitErrorConnection)
-		}
+		db := database.Get()
 
 		if domainURL == "" {
 			var monitor []models.Monitor

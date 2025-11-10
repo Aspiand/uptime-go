@@ -3,7 +3,7 @@ testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  args_bin = ["run", "--config", "./configs/uptime.yml", "--database", "tmp/uptime.db", "--api", "--api-port", "5002"]
+  args_bin = ["run", "--config", "./configs/uptime.yml", "--database", "tmp/uptime.db", "--api", "--api-port", "5002", "--log-level", "debug", "--log-path", "tmp/app.log"]
   bin = "./tmp/main"
   cmd = "go build -o ./tmp/main ."
   delay = 1000
@@ -40,7 +40,7 @@ tmp_dir = "tmp"
   time = false
 
 [misc]
-  clean_on_exit = true
+  clean_on_exit = false
 
 [proxy]
   app_port = 0

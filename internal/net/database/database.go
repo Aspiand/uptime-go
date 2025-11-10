@@ -5,13 +5,18 @@ import (
 	"os"
 	"sync"
 	"time"
-	"uptime-go/internal/configuration"
 	"uptime-go/internal/incident"
 	"uptime-go/internal/models"
 
 	"github.com/glebarez/sqlite"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+)
+
+var (
+	instance *Database
+	once     sync.Once
 )
 
 type Database struct {
@@ -19,57 +24,66 @@ type Database struct {
 	mutex sync.RWMutex
 }
 
-func InitializeDatabase() (*Database, error) {
-	DBPath := configuration.Config.DBFile
+func Get() *Database {
+	return instance
+}
 
-	// Check if the database file exists, if not create it
-	if _, err := os.Stat(DBPath); os.IsNotExist(err) {
-		file, err := os.Create(DBPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create database file: %w", err)
+func Init(dbPath string) (err error) {
+	once.Do(func() {
+		// Check if the database file exists, if not create it
+		if _, errStat := os.Stat(dbPath); dbPath != ":memory:" && err != nil {
+			if !os.IsNotExist(errStat) {
+				err = errStat
+				return
+			}
+
+			file, errCreate := os.Create(dbPath)
+			if errCreate != nil {
+				err = fmt.Errorf("failed to create database file: %w", errCreate)
+			}
+			file.Close()
 		}
-		defer file.Close()
-	}
 
-	// Open the database connection using GORM and SQLite with connection pool configuration
-	db, err := gorm.Open(sqlite.Open(DBPath+"?_journal_mode=WAL"), &gorm.Config{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
+		log.Debug().Str("database", dbPath).Msg("connectiong to database...")
 
-	// Configure connection pooling
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get database connection: %w", err)
-	}
+		// Open the database connection using GORM and SQLite with connection pool configuration
+		gormDB, errOpen := gorm.Open(sqlite.Open(dbPath+"?_journal_mode=WAL&_pragma=foreign_keys"), &gorm.Config{})
+		if errOpen != nil {
+			err = fmt.Errorf("failed to connect to database: %w", errOpen)
+			return
+		}
 
-	// Set connection pool settings
-	// SetMaxIdleConns sets the maximum number of connections in the idle connection pool
-	sqlDB.SetMaxIdleConns(10)
+		// Configure connection pooling
+		sqlDB, errSQL := gormDB.DB()
+		if errSQL != nil {
+			err = fmt.Errorf("failed to get database connection: %w", errSQL)
+			return
+		}
 
-	// SetMaxOpenConns sets the maximum number of open connections to the database
-	sqlDB.SetMaxOpenConns(100)
+		// Set connection pool settings
+		sqlDB.SetMaxIdleConns(10)
+		sqlDB.SetMaxOpenConns(100)
+		sqlDB.SetConnMaxLifetime(time.Hour)
+		sqlDB.SetConnMaxIdleTime(30 * time.Minute)
 
-	// SetConnMaxLifetime sets the maximum amount of time a connection may be reused
-	sqlDB.SetConnMaxLifetime(time.Hour)
+		// Migrate the schema
+		if errMigrate := gormDB.AutoMigrate(
+			&models.Monitor{},
+			&models.MonitorHistory{},
+			&models.Incident{},
+		); errMigrate != nil {
+			err = fmt.Errorf("failed to migrate database schema: %w", errMigrate)
+			return
+		}
 
-	// SetConnMaxIdleTime sets the maximum amount of time a connection may be idle
-	sqlDB.SetConnMaxIdleTime(30 * time.Minute)
+		instance = &Database{DB: gormDB}
+	})
 
-	// Migrate the schema
-	if err := db.AutoMigrate(
-		&models.Monitor{},
-		&models.MonitorHistory{},
-		&models.Incident{},
-	); err != nil {
-		return nil, fmt.Errorf("failed to migrate database schema: %w", err)
-	}
-
-	return &Database{DB: db}, nil
+	return err
 }
 
 func InitializeTestDatabase() (*Database, error) {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(":memory:?_journal_mode=WAL&_pragma=foreign_keys"), &gorm.Config{
 		// NamingStrategy: schema.NamingStrategy{
 		// 	TablePrefix: "test_" + fmt.Sprint(time.Now().Unix()) + "_",
 		// },

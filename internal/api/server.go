@@ -22,7 +22,8 @@ type ServerConfig struct {
 
 func NewServer(cfg ServerConfig) *Server {
 	// gin.SetMode(gin.ReleaseMode)
-	gin.SetMode(gin.DebugMode)
+	// gin.SetMode(gin.DebugMode)
+	// TODO: use environment variable instead
 
 	router := gin.New()
 	router.Use(gin.Recovery())

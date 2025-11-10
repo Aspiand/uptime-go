@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -14,6 +13,8 @@ import (
 	"uptime-go/internal/models"
 	"uptime-go/internal/net"
 	"uptime-go/internal/net/database"
+
+	"github.com/rs/zerolog/log"
 )
 
 // UptimeMonitor represents a service that periodically checks website uptime
@@ -38,17 +39,17 @@ func (m *UptimeMonitor) Start() {
 
 	go func() {
 		<-sigChan
-		fmt.Println("\nShutting down gracefully...")
+		log.Info().Msg("\nShutting down gracefully...")
 		m.Stop()
 	}()
 
-	fmt.Println("Starting uptime monitoring for", len(m.configs), "websites")
-	fmt.Println("Press Ctrl+C to stop")
+	log.Info().Msgf("Starting uptime monitoring for %d websites", len(m.configs))
+	log.Info().Msg("Press Ctrl+C to stop")
 
 	// Start a goroutine for each website to monitor
 	for _, cfg := range m.configs {
 		if !cfg.Enabled {
-			log.Printf("%s - skipped because disabled\n", cfg.URL)
+			log.Info().Msgf("%s - skipped because disabled", cfg.URL)
 			continue
 		}
 
@@ -62,7 +63,7 @@ func (m *UptimeMonitor) Start() {
 func (m *UptimeMonitor) Stop() {
 	close(m.stopChan)
 	m.wg.Wait()
-	fmt.Println("Monitoring stopped")
+	log.Info().Msg("Monitoring stopped")
 }
 
 func (m *UptimeMonitor) monitorWebsite(cfg *models.Monitor) {
@@ -94,7 +95,7 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 
 	result, err := nc.CheckWebsite()
 	if err != nil {
-		log.Printf("Error checking %s: %v", monitor.URL, err)
+		log.Error().Err(err).Msgf("Error checking %s", monitor.URL)
 		// Create a failed check result
 		result = &net.CheckResults{
 			URL:          monitor.URL,
@@ -137,11 +138,11 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 		},
 	}
 
-	log.Printf("%s - %s - Response time: %v - Status: %d",
+	log.Info().Msgf("%s - %s - Response time: %v - Status: %d",
 		monitor.URL, statusText, result.ResponseTime, result.StatusCode)
 
 	if err := m.db.Upsert(monitor); err != nil {
-		log.Printf("Failed to save result to database: %v", err)
+		log.Error().Err(err).Msg("Failed to save result to database")
 	}
 }
 
@@ -181,7 +182,7 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.C
 	now := time.Now()
 	monitor.LastDown = &now
 	m.db.DB.Create(inc)
-	log.Printf(
+	log.Warn().Msgf(
 		"%s - New Incident detected! - Type: %s",
 		monitor.URL, inc.Type,
 	)
@@ -198,7 +199,7 @@ func (m *UptimeMonitor) resolveIncidents(monitor *models.Monitor, incidentType i
 		lastIncident.SolvedAt = &now
 		monitor.LastUp = &now
 		m.db.Upsert(lastIncident)
-		log.Printf("%s - Incident Solved - Type: %s - Downtime: %s\n", monitor.URL, incidentType, time.Since(lastIncident.CreatedAt))
+		log.Info().Msgf("%s - Incident Solved - Type: %s - Downtime: %s", monitor.URL, incidentType, time.Since(lastIncident.CreatedAt))
 		net.UpdateIncidentStatus(lastIncident, incident.Resolved)
 
 		return true
@@ -225,7 +226,7 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 
 		// If the existing incident is for "almost expired", update it to "expired".
 		if lastIncident.IsExists() && lastIncident.Description == "Certificate almost expired" {
-			log.Printf("%s - Certificate expired - [%s]", monitor.URL, result.SSLExpiredDate)
+			log.Warn().Msgf("%s - Certificate expired - [%s]", monitor.URL, result.SSLExpiredDate)
 			lastIncident.Description = "Certificate expired"
 			if id, err := net.NotifyIncident(lastIncident, incident.HIGH, attr); err == nil {
 				lastIncident.IncidentID = id
@@ -236,7 +237,7 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 
 		// If there is no incident, create a new "expired" incident.
 		if lastIncident.IsNotExists() {
-			log.Printf("%s - Certificate expired - [%s]", monitor.URL, result.SSLExpiredDate)
+			log.Warn().Msgf("%s - Certificate expired - [%s]", monitor.URL, result.SSLExpiredDate)
 			inc := &models.Incident{
 				ID:          helper.GenerateRandomID(),
 				MonitorID:   monitor.ID,
@@ -262,7 +263,7 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 
 		// If no incident exists, create a new "almost expired" incident.
 		if lastIncident.IsNotExists() {
-			log.Printf("%s - Please update SSL Certificate - [%s]", monitor.URL, result.SSLExpiredDate)
+			log.Warn().Msgf("%s - Please update SSL Certificate - [%s]", monitor.URL, result.SSLExpiredDate)
 			inc := &models.Incident{
 				ID:          helper.GenerateRandomID(),
 				MonitorID:   monitor.ID,
@@ -288,7 +289,7 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 
 		lastIncident.SolvedAt = &now
 		m.db.Upsert(lastIncident)
-		log.Printf("%s - SSL Updated\n", monitor.URL)
+		log.Info().Msgf("%s - SSL Updated", monitor.URL)
 		return true
 	}
 

@@ -2,12 +2,12 @@ package configuration
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"uptime-go/internal/helper"
 	"uptime-go/internal/models"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
@@ -59,7 +59,7 @@ func GetIncidentStatusURL(id uint64) string {
 func Load() error {
 	// Create the directory if it doesn't exist
 	if err := os.MkdirAll(PLUGIN_PATH, 0755); err != nil {
-		fmt.Printf("failed to create directory: %v", err)
+		log.Error().Err(err).Msg("failed to create directory")
 		return err
 	}
 
@@ -114,7 +114,7 @@ func Load() error {
 	// Parse
 	for _, monitor := range Config.MonitorConfig {
 		if monitor.URL == "" {
-			log.Print("[config] found record with empty url")
+			log.Warn().Msg("[config] found record with empty url")
 			continue
 		}
 

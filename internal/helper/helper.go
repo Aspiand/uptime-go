@@ -3,16 +3,17 @@ package helper
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"log"
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 func GenerateRandomID() string {
 	b := make([]byte, 4)
 	if _, err := rand.Read(b); err != nil {
-		log.Printf("failed to generate random ID: %v", err)
+		log.Error().Err(err).Msg("failed to generate random ID")
 		return ""
 	}
 
@@ -24,8 +25,8 @@ func ParseDuration(input string, defaultValue string) time.Duration {
 	matches := re.FindAllStringSubmatch(input, -1)
 
 	if len(matches) == 0 && defaultValue != "" {
-		log.Printf("[helper] invalid duration string: '%s'", input)
-		log.Printf("[helper] using default value: %s", defaultValue)
+		log.Warn().Msgf("[helper] invalid duration string: '%s'", input)
+		log.Warn().Msgf("[helper] using default value: %s", defaultValue)
 		return ParseDuration(defaultValue, "")
 	}
 
