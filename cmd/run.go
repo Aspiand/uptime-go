@@ -1,21 +1,24 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"uptime-go/internal/api"
+	"uptime-go/internal/configuration"
+	"uptime-go/internal/helper"
+	"uptime-go/internal/monitor"
+	"uptime-go/internal/net/database"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-var noTimeInLog bool
-
 var (
 	enableAPI bool
-	apiPort   string
 	apiBind   string
+	apiPort   string
 )
 
 // runCmd represents the run command
@@ -29,56 +32,41 @@ Use this command to start the monitoring service.
 Example:
   uptime-go run --config /path/to/your/config.yml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// if len(configuration.Config.Monitor) <= 0 {
-		// 	return fmt.Errorf("no valid website configurations found in config file")
-		// }
-
-		// if noTimeInLog {
-		// 	log.SetFlags(0)
-		// }
-
-		// configs := configuration.Config.Monitor
-
-		// var urls []string
-
-		// for _, r := range configs {
-		// 	r.ID = helper.GenerateRandomID()
-		// 	urls = append(urls, r.URL)
-		// }
-
-		// // Initialize database
-		// db, err := database.InitializeDatabase()
-		// if err != nil {
-		// 	fmt.Printf("failed to initialize database: %v", err)
-		// 	os.Exit(ExitErrorConnection)
-		// }
-
-		// // Merge config
-		// db.UpsertRecord(configs, "url", &[]string{
-		// 	"url",
-		// 	"enabled",
-		// 	"response_time_threshold",
-		// 	"interval",
-		// 	"certificate_monitoring",
-		// 	"certificate_expired_before",
-		// })
-		// db.DB.Where("url IN ?", urls).Find(&configs)
-
-		// // Initialize and start monitor
-		// uptimeMonitor, err := monitor.NewUptimeMonitor(db, configs)
-		// if err != nil {
-		// 	fmt.Fprintf(os.Stderr, "Error initializing monitor: %v\n", err)
-		// 	os.Exit(ExitErrorConfig)
-		// }
-
-		// uptimeMonitor.Start()
-
-		// Create a base context that we can cancel when shutting down
-		// ctx, cancel := context.WithCancel(context.Background())
-		// defer cancel()
-
 		// Monitoring Section
-		//
+		configs := configuration.Config.Monitor
+
+		var urls []string
+
+		for _, r := range configs {
+			r.ID = helper.GenerateRandomID()
+			urls = append(urls, r.URL)
+		}
+
+		// Initialize database
+		db := database.Get()
+
+		// Merge config
+		db.UpsertRecord(configs, "url", &[]string{
+			"url",
+			"enabled",
+			"response_time_threshold",
+			"interval",
+			"certificate_monitoring",
+			"certificate_expired_before",
+		})
+		db.DB.Where("url IN ?", urls).Find(&configs)
+
+		// Initialize and start monitor
+		uptimeMonitor, err := monitor.NewUptimeMonitor(db, configs)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error initializing monitor: %v\n", err)
+			os.Exit(ExitErrorConfig)
+		}
+
+		// TODO: implement gracefull shutdown for uptime monitoring
+		go func() {
+			uptimeMonitor.Start()
+		}()
 
 		// API Section
 		var apiServer *api.Server
@@ -115,7 +103,6 @@ Example:
 
 func init() {
 	rootCmd.AddCommand(runCmd)
-	runCmd.Flags().BoolVar(&noTimeInLog, "no-time", false, "hide time in log")
 
 	// API flags
 	runCmd.Flags().BoolVar(&enableAPI, "api", false, "Enable API server for remote management")

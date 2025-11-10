@@ -114,7 +114,7 @@ func Load() error {
 	// Parse
 	for _, monitor := range Config.MonitorConfig {
 		if monitor.URL == "" {
-			log.Warn().Msg("[config] found record with empty url")
+			log.Warn().Msg("found record with empty url")
 			continue
 		}
 
@@ -123,7 +123,7 @@ func Load() error {
 		certificateExpiredBefore := helper.ParseDuration(monitor.CertificateExpiredBefore, "31d")
 
 		Config.Monitor = append(Config.Monitor, &models.Monitor{
-			URL:                      monitor.URL,
+			URL:                      helper.NormalizeURL(monitor.URL),
 			Enabled:                  monitor.Enabled,
 			Interval:                 interval,
 			ResponseTimeThreshold:    timeout,

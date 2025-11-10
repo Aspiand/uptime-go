@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"uptime-go/internal/api/handlers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -21,13 +22,9 @@ type ServerConfig struct {
 }
 
 func NewServer(cfg ServerConfig) *Server {
-	// gin.SetMode(gin.ReleaseMode)
-	// gin.SetMode(gin.DebugMode)
-	// TODO: use environment variable instead
-
 	router := gin.New()
 	router.Use(gin.Recovery())
-	router.Use(logger())
+	router.Use(accessLogger())
 
 	server := &Server{
 		router: router,
@@ -71,10 +68,8 @@ func (s *Server) Shutdown() {
 func (s *Server) setupRoutes() {
 	s.router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status":    "healthy",
-			"service":   "malware-hunter",
-			"timestamp": time.Now().Unix(),
-			"uptime":    time.Since(time.Now()).Seconds(),
+			"status":  "healthy",
+			"service": "uptime-go",
 		})
 	})
 
@@ -82,10 +77,11 @@ func (s *Server) setupRoutes() {
 	api.GET("/config")
 	api.POST("/config")
 
-	// reportGroup := api.Group("/report")
+	reportGroup := api.Group("/reports")
+	reportGroup.GET("", handlers.GetMonitoringReport)
 }
 
-func logger() gin.HandlerFunc {
+func accessLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
