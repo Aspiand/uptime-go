@@ -3,9 +3,7 @@ package monitor
 import (
 	"fmt"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"uptime-go/internal/helper"
@@ -34,17 +32,7 @@ func NewUptimeMonitor(db *database.Database, configs []*models.Monitor) (*Uptime
 }
 
 func (m *UptimeMonitor) Start() {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		<-sigChan
-		log.Info().Msg("\nShutting down gracefully...")
-		m.Stop()
-	}()
-
 	log.Info().Msgf("Starting uptime monitoring for %d websites", len(m.configs))
-	log.Info().Msg("Press Ctrl+C to stop")
 
 	// Start a goroutine for each website to monitor
 	for _, cfg := range m.configs {
@@ -57,13 +45,14 @@ func (m *UptimeMonitor) Start() {
 		go m.monitorWebsite(cfg)
 	}
 
-	m.wg.Wait()
 }
 
-func (m *UptimeMonitor) Stop() {
+// Shutdown gracefully stops all monitoring goroutines.
+func (m *UptimeMonitor) Shutdown() {
+	log.Info().Msg("Shutting down uptime monitoring...")
 	close(m.stopChan)
 	m.wg.Wait()
-	log.Info().Msg("Monitoring stopped")
+	log.Info().Msg("Uptime monitoring stopped")
 }
 
 func (m *UptimeMonitor) monitorWebsite(cfg *models.Monitor) {

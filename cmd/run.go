@@ -86,12 +86,16 @@ Example:
 		}
 
 		// Set up signal handling for graceful shutdown
+		log.Info().Msg("Press Ctrl+C to stop")
+
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
 		// Wait for shutdown signal
 		<-sigChan
 		log.Info().Msg("Shutdown signal received, shutting down...")
+
+		uptimeMonitor.Shutdown()
 
 		if apiServer != nil {
 			apiServer.Shutdown()

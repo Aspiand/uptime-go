@@ -132,6 +132,34 @@ func (db *Database) Upsert(record any) error {
 	return db.UpsertRecord(record, "id", nil)
 }
 
+func (db *Database) GetAllMonitors() ([]models.Monitor, error) {
+	var monitors []models.Monitor
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
+
+	if err := db.DB.Find(&monitors).Error; err != nil {
+		return nil, fmt.Errorf("failed to get all monitors: %w", err)
+	}
+	return monitors, nil
+}
+
+func (db *Database) GetMonitorWithHistories(url string, limit int) (*models.Monitor, error) {
+	var monitor models.Monitor
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
+
+	if err := db.DB.
+		Preload("Histories", func(db *gorm.DB) *gorm.DB {
+			return db.Order("monitor_histories.created_at DESC").Limit(limit)
+		}).
+		Where("url = ?", url).
+		Find(&monitor).Error; err != nil {
+		return nil, fmt.Errorf("failed to get monitor with histories for URL %s: %w", url, err)
+	}
+
+	return &monitor, nil
+}
+
 func (db *Database) GetLastIncident(url string, incidentType incident.Type) *models.Incident {
 	var incident models.Incident
 

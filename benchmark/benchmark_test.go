@@ -137,7 +137,7 @@ func benchmarkMonitor(b *testing.B, websiteCount int) {
 	monitoringDuration := 5 * time.Second
 	go func() {
 		time.Sleep(monitoringDuration)
-		uptimeMonitor.Stop()
+		uptimeMonitor.Shutdown()
 	}()
 
 	// Start the monitor
