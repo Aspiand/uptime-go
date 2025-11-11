@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	VERSION            = "0.1.2"
+	VERSION            = "0.1.3"
 	OJTGUARDIAN_PATH   = "/etc/ojtguardian"
 	OJTGUARDIAN_CONFIG = OJTGUARDIAN_PATH + "/main.yml"
 )
