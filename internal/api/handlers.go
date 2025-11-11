@@ -1,19 +1,21 @@
-package handlers
+package api
 
 import (
 	"net/http"
-	"uptime-go/internal/net/database"
 
 	"github.com/gin-gonic/gin"
 )
 
-// ReportQueryParams struct to hold query parameters for the report endpoint
 type ReportQueryParams struct {
 	URL   string `form:"url"`
-	Limit int    `form:"limit"` // gin's ShouldBindQuery doesn't natively support default tag, handle manually
+	Limit int    `form:"limit"`
 }
 
-func GetMonitoringReport(c *gin.Context) {
+func (s *Server) UpdateConfigHandler(c *gin.Context) {
+	// TODO: handle
+}
+
+func (s *Server) GetMonitoringReport(c *gin.Context) {
 	var queryParams ReportQueryParams
 
 	if err := c.ShouldBindQuery(&queryParams); err != nil {
@@ -21,15 +23,12 @@ func GetMonitoringReport(c *gin.Context) {
 		return
 	}
 
-	// Apply default for limit if not provided or invalid
-	if queryParams.Limit == 0 { // If limit was not provided or parsed to 0, use default
+	if queryParams.Limit == 0 {
 		queryParams.Limit = 1000
 	}
 
-	db := database.Get()
-
 	if queryParams.URL == "" {
-		monitors, err := db.GetAllMonitors()
+		monitors, err := s.db.GetAllMonitors()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to retrieve monitors", "error": err.Error()})
 			return
@@ -38,7 +37,7 @@ func GetMonitoringReport(c *gin.Context) {
 		return
 	}
 
-	monitor, err := db.GetMonitorWithHistories(queryParams.URL, queryParams.Limit)
+	monitor, err := s.db.GetMonitorWithHistories(queryParams.URL, queryParams.Limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to retrieve monitor details", "error": err.Error()})
 		return
@@ -50,4 +49,11 @@ func GetMonitoringReport(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, monitor)
+}
+
+func (s *Server) HealthCheckHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "healthy",
+		"service": "uptime-go",
+	})
 }

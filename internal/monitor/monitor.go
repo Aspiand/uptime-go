@@ -44,7 +44,6 @@ func (m *UptimeMonitor) Start() {
 		m.wg.Add(1)
 		go m.monitorWebsite(cfg)
 	}
-
 }
 
 // Shutdown gracefully stops all monitoring goroutines.

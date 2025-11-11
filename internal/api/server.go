@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-	"uptime-go/internal/api/handlers"
+	"uptime-go/internal/net/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
 
 type Server struct {
-	router     *gin.Engine
-	HTTPServer *http.Server
+	db     *database.Database
+	router *gin.Engine
+	server *http.Server
 }
 
 type ServerConfig struct {
@@ -21,14 +22,15 @@ type ServerConfig struct {
 	Port string
 }
 
-func NewServer(cfg ServerConfig) *Server {
+func NewServer(cfg ServerConfig, db *database.Database) *Server {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(accessLogger())
 
 	server := &Server{
+		db:     db,
 		router: router,
-		HTTPServer: &http.Server{
+		server: &http.Server{
 			Addr:         fmt.Sprintf("%s:%s", cfg.Bind, cfg.Port),
 			Handler:      router.Handler(),
 			ReadTimeout:  30 * time.Second,
@@ -43,9 +45,9 @@ func NewServer(cfg ServerConfig) *Server {
 }
 
 func (s *Server) Start() error {
-	log.Info().Str("address", s.HTTPServer.Addr).Msg("Starting api server")
+	log.Info().Str("address", s.server.Addr).Msg("Starting api server")
 
-	if err := s.HTTPServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("failed to start api server: %w", err)
 	}
 
@@ -58,7 +60,7 @@ func (s *Server) Shutdown() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 
-	if err := s.HTTPServer.Shutdown(shutdownCtx); err != nil {
+	if err := s.server.Shutdown(shutdownCtx); err != nil {
 		log.Error().Err(err).Msg("Error stopping API server")
 	}
 
@@ -66,19 +68,14 @@ func (s *Server) Shutdown() {
 }
 
 func (s *Server) setupRoutes() {
-	s.router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"service": "uptime-go",
-		})
-	})
+	s.router.GET("/health", s.HealthCheckHandler)
 
 	api := s.router.Group("/api/uptime-go")
-	api.GET("/config")
-	api.POST("/config")
+	// api.GET("/config")
+	api.POST("/config", s.UpdateConfigHandler)
 
 	reportGroup := api.Group("/reports")
-	reportGroup.GET("", handlers.GetMonitoringReport)
+	reportGroup.GET("", s.GetMonitoringReport)
 }
 
 func accessLogger() gin.HandlerFunc {

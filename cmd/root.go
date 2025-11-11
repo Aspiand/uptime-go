@@ -3,9 +3,7 @@ package cmd
 import (
 	"os"
 
-	"uptime-go/internal/config"
 	"uptime-go/internal/configuration"
-	"uptime-go/internal/net/database"
 	"uptime-go/pkg/log"
 
 	"github.com/spf13/cobra"
@@ -40,15 +38,7 @@ Usage: uptime-go [--config=path/to/uptime.yaml] run`,
 		log.InitLogger(logPath)
 		log.SetLogLevel(logLevel)
 
-		if err := configuration.Load(); err != nil {
-			return err
-		}
-
-		if err := config.Init(); err != nil {
-			return err
-		}
-
-		if err := database.Init(databasePath); err != nil {
+		if err := configuration.Load(configPath); err != nil {
 			return err
 		}
 
@@ -66,12 +56,8 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", configuration.CONFIG_PATH, "Path to configuration file")
-	rootCmd.PersistentFlags().StringVarP(&databasePath, "database", "", configuration.DB_PATH, "Path to database file")
+	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "/etc/uptime-go/config.yml", "Path to configuration file")
+	rootCmd.PersistentFlags().StringVarP(&databasePath, "database", "d", "/var/lib/uptime-go/uptime.db", "Path to database file")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Log level (debug, info, warn, error)")
 	rootCmd.PersistentFlags().StringVar(&logPath, "log-path", "", "Path to log file")
-
-	// Temporary
-	configuration.Config.ConfigFile = configPath
-	configuration.Config.DBFile = databasePath
 }

@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"uptime-go/internal/configuration"
 	"uptime-go/internal/models"
 	"uptime-go/internal/monitor"
 	"uptime-go/internal/net/database"
@@ -114,8 +113,6 @@ func benchmarkMonitor(b *testing.B, websiteCount int) {
 	// Record memory before
 	beforeStats := getMemStats()
 	startTime := time.Now()
-
-	configuration.Config.DBFile = "./uptime.db"
 
 	// Create database connection
 	log.Info().Msg("Calling InitializeTestDatabase...")

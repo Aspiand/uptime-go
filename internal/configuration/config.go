@@ -15,9 +15,6 @@ const (
 	VERSION            = "0.1.2"
 	OJTGUARDIAN_PATH   = "/etc/ojtguardian"
 	OJTGUARDIAN_CONFIG = OJTGUARDIAN_PATH + "/main.yml"
-	PLUGIN_PATH        = OJTGUARDIAN_PATH + "/plugins/uptime"
-	CONFIG_PATH        = PLUGIN_PATH + "/config.yml"
-	DB_PATH            = PLUGIN_PATH + "/uptime.db"
 )
 
 type MonitorConfig struct {
@@ -30,70 +27,64 @@ type MonitorConfig struct {
 }
 
 type AppConfig struct {
-	ConfigFile string
-	DBFile     string
-	Main       struct {
+	Agent struct {
 		MasterHost string `yaml:"master_host" mapstructure:"master_host"`
 		Auth       struct {
 			Token string
 		}
 	}
 
-	// Parsed config
 	Monitor []*models.Monitor
-
-	// Raw config
-	MonitorConfig []MonitorConfig `mapstructure:"monitor" yaml:"monitor" json:"monitor"`
 }
 
 var Config AppConfig
 
 func GetIncidentCreateURL() string {
-	return Config.Main.MasterHost + "/api/v1/incidents/add"
+	return Config.Agent.MasterHost + "/api/v1/incidents/add"
 }
 
 func GetIncidentStatusURL(id uint64) string {
-	return fmt.Sprintf("%s/api/v1/incidents/%d/update-status", Config.Main.MasterHost, id)
+	return fmt.Sprintf("%s/api/v1/incidents/%d/update-status", Config.Agent.MasterHost, id)
 }
 
-func Load() error {
-	// Create the directory if it doesn't exist
-	if err := os.MkdirAll(PLUGIN_PATH, 0755); err != nil {
-		log.Error().Err(err).Msg("failed to create directory")
+func Load(configPath string) error {
+	// Load agent config
+	agentConfig := viper.New()
+	agentConfig.SetConfigFile(OJTGUARDIAN_CONFIG)
+	agentConfig.SetConfigType("yaml")
+	if err := agentConfig.ReadInConfig(); err != nil {
 		return err
 	}
 
-	// Load main config
-	vMain := viper.New()
-	vMain.SetConfigFile(OJTGUARDIAN_CONFIG)
-	vMain.SetConfigType("yaml")
-	if err := vMain.ReadInConfig(); err != nil {
+	if err := agentConfig.Unmarshal(&Config.Agent); err != nil {
 		return err
-	}
-
-	if err := vMain.Unmarshal(&Config.Main); err != nil {
-		return err
-	}
-
-	// Ensure monitor config file is absolute
-	if !filepath.IsAbs(Config.ConfigFile) {
-		absPath, err := filepath.Abs(Config.ConfigFile)
-		if err == nil {
-			Config.ConfigFile = absPath
-		}
 	}
 
 	// Load monitor config
-	vMonitor := viper.New()
-	vMonitor.SetConfigFile(Config.ConfigFile)
-	vMonitor.SetConfigType("yaml")
+	if !filepath.IsAbs(configPath) {
+		absPath, err := filepath.Abs(configPath)
+		if err == nil {
+			configPath = absPath
+		}
+	}
 
-	if err := vMonitor.ReadInConfig(); err != nil {
+	// Create the directory if it doesn't exist
+	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+		log.Error().Err(err).Msg("failed to create configuration directory")
+		return err
+	}
+
+	monitorConfig := viper.New()
+	monitorConfig.SetConfigFile(configPath)
+	monitorConfig.SetConfigType("yml")
+
+	if err := monitorConfig.ReadInConfig(); err != nil {
 		if !os.IsNotExist(err) {
 			return err
 		}
 
-		vMonitor.Set("monitor", []MonitorConfig{
+		// File doesn't exist, create it with default values
+		monitorConfig.Set("monitor", []MonitorConfig{
 			{
 				URL:                   "https://genbucyber.com",
 				Enabled:               true,
@@ -102,28 +93,31 @@ func Load() error {
 			},
 		})
 
-		if err := vMonitor.WriteConfig(); err != nil {
+		if err := monitorConfig.WriteConfig(); err != nil {
 			return err
 		}
 	}
 
-	if err := vMonitor.UnmarshalKey("monitor", &Config.MonitorConfig); err != nil {
+	var rawMonitor []MonitorConfig
+
+	if err := monitorConfig.UnmarshalKey("monitor", &rawMonitor); err != nil {
 		return err
 	}
 
 	// Parse
-	for _, monitor := range Config.MonitorConfig {
+	for _, monitor := range rawMonitor {
 		if monitor.URL == "" {
 			log.Warn().Msg("found record with empty url")
 			continue
 		}
 
+		URL := helper.NormalizeURL(monitor.URL)
 		interval := helper.ParseDuration(monitor.Interval, "5m")
 		timeout := helper.ParseDuration(monitor.ResponseTimeThreshold, "10s")
 		certificateExpiredBefore := helper.ParseDuration(monitor.CertificateExpiredBefore, "31d")
 
 		Config.Monitor = append(Config.Monitor, &models.Monitor{
-			URL:                      helper.NormalizeURL(monitor.URL),
+			URL:                      URL,
 			Enabled:                  monitor.Enabled,
 			Interval:                 interval,
 			ResponseTimeThreshold:    timeout,

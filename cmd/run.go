@@ -43,7 +43,11 @@ Example:
 		}
 
 		// Initialize database
-		db := database.Get()
+		db, err := database.New(databasePath)
+		if err != nil {
+			log.Error().Err(err).Str("database_path", databasePath).Msg("Error initializing database")
+			return err
+		}
 
 		// Merge config
 		db.UpsertRecord(configs, "url", &[]string{
@@ -63,7 +67,6 @@ Example:
 			os.Exit(ExitErrorConfig)
 		}
 
-		// TODO: implement gracefull shutdown for uptime monitoring
 		go func() {
 			uptimeMonitor.Start()
 		}()
@@ -76,7 +79,7 @@ Example:
 			apiServer = api.NewServer(api.ServerConfig{
 				Bind: apiBind,
 				Port: apiPort,
-			})
+			}, db)
 
 			go func() {
 				if err := apiServer.Start(); err != nil {

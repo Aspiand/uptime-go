@@ -27,7 +27,7 @@ func sendRequest(method string, url string, payload any) (*http.Response, []byte
 		Timeout: 10 * time.Second,
 	}
 
-	token := configuration.Config.Main.Auth.Token
+	token := configuration.Config.Agent.Auth.Token
 	if token == "" {
 		log.Error().Msg("[webhook] invalid server token")
 		return nil, nil, fmt.Errorf("error creating request for %s: invalid server token", url)
