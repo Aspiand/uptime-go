@@ -15,7 +15,6 @@ const (
 	ExitErrorInvalidArgs = 1
 	ExitErrorConnection  = 2
 	ExitErrorConfig      = 3
-	VERSION              = "0.1.3"
 )
 
 var (
