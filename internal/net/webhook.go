@@ -64,7 +64,7 @@ func sendRequest(method string, url string, payload any) (*http.Response, []byte
 	return response, respBody, nil
 }
 
-func NotifyIncident(incident *models.Incident, severity incident.Severity, attributes map[string]any) (uint64, error) {
+func NotifyIncident(incident *models.Incident, severity incident.Severity, event string, attributes map[string]any) (uint64, error) {
 	if incident.Monitor.IsNotExists() {
 		return 0, fmt.Errorf("incident monitor data is not properly initialized")
 	}
@@ -95,7 +95,7 @@ func NotifyIncident(incident *models.Incident, severity incident.Severity, attri
 		Module:     "UptimePlugin",
 		Severity:   string(severity),
 		Message:    incident.Description,
-		Event:      "website_down",
+		Event:      event,
 		Tags:       []string{"uptime", "monitoring", string(incident.Type)},
 		Attributes: attr,
 	}

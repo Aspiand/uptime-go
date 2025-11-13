@@ -23,3 +23,8 @@ const (
 	SSLExpired           Type = "certificate_expired"
 	Timeout              Type = "timeout"
 )
+
+const (
+	EventWebsiteDown               string = "website_down"
+	EventWebsiteCertificateExpired string = "website_certificate_expired"
+)
