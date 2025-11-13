@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -84,15 +85,6 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 	result, err := nc.CheckWebsite()
 	if err != nil {
 		log.Error().Err(err).Msgf("Error checking %s", monitor.URL)
-		// Create a failed check result
-		result = &net.CheckResults{
-			URL:          monitor.URL,
-			LastCheck:    time.Now(),
-			ResponseTime: 0,
-			IsUp:         false,
-			StatusCode:   0,
-			ErrorMessage: err.Error(),
-		}
 	}
 
 	statusText := "UP"
@@ -135,19 +127,27 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 }
 
 func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.CheckResults, err error) (bool, incident.Type) {
-	// return true if new incident created; else false and incident type
+	// return true if new incident created; else false, incident type
 
 	var description string
 	incidentType := incident.UnexpectedStatusCode
 
+	attributes := map[string]any{
+		"status_code":   result.StatusCode,
+		"response_time": result.ResponseTime.Seconds(),
+		"error_message": result.ErrorMessage,
+	}
+
 	if err != nil {
-		description = err.Error()
 		if os.IsTimeout(err) {
 			incidentType = incident.Timeout
 			result.ResponseTime = monitor.ResponseTimeThreshold
+			description = fmt.Sprintf("Request timed out: %s", monitor.URL)
+		} else {
+			description = fmt.Sprintf("An unexpected error occurred at %s", monitor.URL)
 		}
 	} else {
-		description = fmt.Sprintf("Unexpected status code: %d", result.StatusCode)
+		description = fmt.Sprintf("Received non-successful status code: %d %s", result.StatusCode, http.StatusText(result.StatusCode))
 	}
 
 	lastIncident := m.db.GetLastIncident(monitor.URL, incidentType)
@@ -163,7 +163,7 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.C
 		Monitor:     *monitor,
 	}
 
-	if id, err := net.NotifyIncident(inc, incident.HIGH, nil); err == nil {
+	if id, err := net.NotifyIncident(inc, incident.HIGH, incident.EventWebsiteDown, attributes); err == nil {
 		inc.IncidentID = id
 	}
 
@@ -216,7 +216,7 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 		if lastIncident.IsExists() && lastIncident.Description == "Certificate almost expired" {
 			log.Warn().Msgf("%s - Certificate expired - [%s]", monitor.URL, result.SSLExpiredDate)
 			lastIncident.Description = "Certificate expired"
-			if id, err := net.NotifyIncident(lastIncident, incident.HIGH, attr); err == nil {
+			if id, err := net.NotifyIncident(lastIncident, incident.HIGH, incident.EventWebsiteCertificateExpired, attr); err == nil {
 				lastIncident.IncidentID = id
 			}
 			m.db.Upsert(lastIncident)
@@ -233,7 +233,7 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 				Description: "Certificate expired",
 				Monitor:     *monitor,
 			}
-			if id, err := net.NotifyIncident(inc, incident.HIGH, attr); err == nil {
+			if id, err := net.NotifyIncident(inc, incident.HIGH, incident.EventWebsiteCertificateExpired, attr); err == nil {
 				inc.IncidentID = id
 			}
 			m.db.DB.Create(inc)
@@ -259,7 +259,7 @@ func (m *UptimeMonitor) handleSSL(monitor *models.Monitor, result *net.CheckResu
 				Description: "Certificate almost expired",
 				Monitor:     *monitor,
 			}
-			if id, err := net.NotifyIncident(inc, incident.INFO, attr); err == nil {
+			if id, err := net.NotifyIncident(inc, incident.INFO, incident.EventWebsiteCertificateExpired, attr); err == nil {
 				inc.IncidentID = id
 			}
 			m.db.DB.Create(inc)

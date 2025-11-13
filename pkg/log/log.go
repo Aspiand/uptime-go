@@ -37,12 +37,10 @@ func InitLogger(logFilePath string) {
 	if logFilePath != "" {
 		logDir := filepath.Dir(logFilePath)
 		if err := os.MkdirAll(logDir, 0755); err != nil {
-			// Log a warning to the console (which is already set up)
 			log.Warn().Msgf("Could not create log directory '%s', file logging will be disabled: %v", logDir, err)
 		} else {
 			logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 			if err != nil {
-				// Log a warning to the console
 				log.Warn().Msgf("Could not open log file '%s', file logging will be disabled: %v", logFilePath, err)
 			} else {
 				writers = append(writers, logFile) // Add file writer if successful

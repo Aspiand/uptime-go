@@ -29,9 +29,14 @@ type CheckResults struct {
 }
 
 func (nc *NetworkConfig) CheckWebsite() (*CheckResults, error) {
+	result := &CheckResults{
+		URL:       nc.URL,
+		LastCheck: time.Now(),
+		IsUp:      false,
+	}
+
 	client := &http.Client{
 		Timeout: nc.Timeout,
-
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: nc.SkipSSL || isIPAddress(nc.URL)},
 		},
@@ -46,29 +51,26 @@ func (nc *NetworkConfig) CheckWebsite() (*CheckResults, error) {
 
 	req, err := http.NewRequest(http.MethodGet, nc.URL, nil)
 	if err != nil {
-		return nil, err
+		result.ErrorMessage = err.Error()
+		return result, err
 	}
+
 	req.Header.Set("User-Agent", "GenbuUptimePlugin/0.2")
 
 	start := time.Now()
 	resp, err := client.Do(req)
+	responseTime := time.Since(start)
+	result.ResponseTime = responseTime
+
 	if err != nil {
-		return nil, err
+		result.ErrorMessage = err.Error()
+		return result, err
 	}
 	defer resp.Body.Close()
 
-	responseTime := time.Since(start)
 	success := resp.StatusCode >= 200 && resp.StatusCode < 300
-	isUp := success
-
-	result := &CheckResults{
-		URL:          nc.URL,
-		LastCheck:    time.Now(),
-		ResponseTime: responseTime,
-		IsUp:         isUp,
-		StatusCode:   resp.StatusCode,
-		ErrorMessage: "",
-	}
+	result.IsUp = success
+	result.StatusCode = resp.StatusCode
 
 	if tls := resp.TLS; tls != nil &&
 		tls.PeerCertificates != nil &&

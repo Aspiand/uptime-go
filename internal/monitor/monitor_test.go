@@ -265,6 +265,6 @@ func TestCheckWebsite(t *testing.T) {
 
 		lastIncident := uptimeMonitor.db.GetLastIncident(monitor.URL, incident.UnexpectedStatusCode)
 		assert.True(t, lastIncident.IsExists())
-		assert.Equal(t, "Unexpected status code: 500", lastIncident.Description)
+		assert.Equal(t, "Received non-successful status code: 500 Internal Server Error", lastIncident.Description)
 	})
 }
