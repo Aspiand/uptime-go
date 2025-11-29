@@ -51,5 +51,5 @@ changelog:
 release:
   draft: false
   github:
-    owner: genbucyber
+    owner: Aspiand
     name: uptime-go
