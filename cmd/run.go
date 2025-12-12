@@ -33,6 +33,10 @@ Use this command to start the monitoring service.
 Example:
   uptime-go run --config /path/to/your/config.yml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := configuration.Load(configPath); err != nil {
+			return err
+		}
+
 		// Monitoring Section
 		configs := configuration.Config.Monitor
 

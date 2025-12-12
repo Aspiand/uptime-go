@@ -3,7 +3,6 @@ package cmd
 import (
 	"os"
 
-	"uptime-go/internal/configuration"
 	"uptime-go/pkg/log"
 
 	"github.com/spf13/cobra"
@@ -31,10 +30,6 @@ Usage: uptime-go [--config=path/to/uptime.yaml] run`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		log.InitLogger(logPath)
 		log.SetLogLevel(logLevel)
-
-		if err := configuration.Load(configPath); err != nil {
-			return err
-		}
 
 		return nil
 	},
