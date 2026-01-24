@@ -257,6 +257,10 @@ func TestCheckWebsite(t *testing.T) {
 		}
 		db.DB.Create(monitor)
 
+		// Load monitor and disable retries
+		db.DB.First(monitor)
+		monitor.MaxRetries = 0
+
 		uptimeMonitor.checkWebsite(monitor)
 
 		db.DB.First(monitor)

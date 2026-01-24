@@ -68,18 +68,72 @@ func (m *UptimeMonitor) monitorWebsite(cfg *models.Monitor) {
 		select {
 		case <-ticker.C:
 			m.checkWebsite(cfg)
+
+			// Adjust next check interval based on status
+			nextInterval := cfg.Interval
+			if cfg.Retries > 0 && cfg.RetryInterval > 0 {
+				// Use faster retry interval when in PENDING state
+				nextInterval = cfg.RetryInterval
+				ticker.Reset(nextInterval)
+				log.Debug().Msgf("%s - Using retry interval: %v", cfg.URL, nextInterval)
+			} else {
+				// Reset to normal interval
+				ticker.Reset(cfg.Interval)
+			}
+
 		case <-m.stopChan:
 			return
 		}
 	}
 }
 
+// determineStatus implements state-based retry logic (Uptime Kuma approach)
+func determineStatus(isCurrentCheckUp bool, monitor *models.Monitor) string {
+	wasUp := monitor.IsUp != nil && *monitor.IsUp
+
+	if isCurrentCheckUp {
+		// Current check succeeded - always UP
+		return incident.StatusUP
+	}
+
+	// Current check failed
+	if wasUp {
+		// Was UP, now failing - check if retries available
+		if monitor.MaxRetries > 0 && monitor.Retries < monitor.MaxRetries {
+			monitor.Retries++
+			return incident.StatusPENDING
+		}
+		// No retries left
+		return incident.StatusDOWN
+	}
+
+	// Was already DOWN or PENDING
+	if monitor.Retries > 0 && monitor.Retries < monitor.MaxRetries {
+		// Still in retry phase
+		monitor.Retries++
+		return incident.StatusPENDING
+	}
+
+	// First failure with retries enabled
+	if monitor.MaxRetries > 0 && monitor.Retries == 0 {
+		monitor.Retries = 1
+		return incident.StatusPENDING
+	}
+
+	// Retries exhausted or disabled
+	return incident.StatusDOWN
+}
+
 func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 	nc := &net.NetworkConfig{
-		URL:             monitor.URL,
-		RefreshInterval: monitor.Interval,
-		Timeout:         monitor.ResponseTimeThreshold,
-		SkipSSL:         !monitor.CertificateMonitoring,
+		URL:                   monitor.URL,
+		RefreshInterval:       monitor.Interval,
+		Timeout:               monitor.ResponseTimeThreshold,
+		SkipSSL:               !monitor.CertificateMonitoring,
+		DNSTimeout:            monitor.DNSTimeout,
+		DialTimeout:           monitor.DialTimeout,
+		TLSHandshakeTimeout:   monitor.TLSHandshakeTimeout,
+		ResponseHeaderTimeout: monitor.ResponseHeaderTimeout,
 	}
 
 	result, err := nc.CheckWebsite()
@@ -87,9 +141,20 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 		log.Error().Err(err).Msgf("Error checking %s", monitor.URL)
 	}
 
-	statusText := "UP"
+	// Log phase timings for debugging
+	if result.DNSTime > 0 || result.ConnectTime > 0 {
+		log.Debug().Msgf("%s - Timings: DNS=%v, Connect=%v, FirstByte=%v, Total=%v",
+			monitor.URL, result.DNSTime, result.ConnectTime,
+			result.FirstByteTime, result.ResponseTime)
+	}
+
+	// Determine new status based on check result
+	newStatus := determineStatus(result.IsUp, monitor)
+
 	now := time.Now()
-	if result.IsUp {
+	if newStatus == incident.StatusUP {
+		// Website is UP
+		monitor.Retries = 0 // Reset retries
 		if monitor.LastUp == nil {
 			monitor.LastUp = &now
 		}
@@ -99,11 +164,24 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 		if monitor.CertificateMonitoring {
 			m.handleSSL(monitor, result)
 		}
+
+		log.Info().Msgf("%s - UP - Response time: %v - Status: %d",
+			monitor.URL, result.ResponseTime, result.StatusCode)
+
+	} else if newStatus == incident.StatusPENDING {
+		// Website failed but we're retrying - don't trigger incident yet
+		log.Warn().Msgf("%s - PENDING - Retry %d/%d | Next retry in %v | Error: %s",
+			monitor.URL, monitor.Retries, monitor.MaxRetries, monitor.RetryInterval, result.ErrorMessage)
+
 	} else {
-		statusText = "DOWN"
+		// Website is DOWN (after all retries exhausted)
+		monitor.Retries = 0 // Reset for next cycle
 		m.handleWebsiteDown(monitor, result, err)
+		log.Error().Msgf("%s - DOWN - All retries exhausted | Error: %s",
+			monitor.URL, result.ErrorMessage)
 	}
 
+	// Update monitor state
 	responseTime := result.ResponseTime.Milliseconds()
 	monitor.UpdatedAt = result.LastCheck
 	monitor.IsUp = &result.IsUp
@@ -117,9 +195,6 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 			ResponseTime: responseTime,
 		},
 	}
-
-	log.Info().Msgf("%s - %s - Response time: %v - Status: %d",
-		monitor.URL, statusText, result.ResponseTime, result.StatusCode)
 
 	if err := m.db.Upsert(monitor); err != nil {
 		log.Error().Err(err).Msg("Failed to save result to database")

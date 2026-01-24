@@ -29,6 +29,17 @@ type Monitor struct {
 	UpdatedAt                time.Time        `json:"last_check"`
 	Histories                []MonitorHistory `json:"histories,omitempty" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Incidents                []Incident       `json:"-" gorm:"foreignKey:MonitorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+
+	// Retry configuration
+	MaxRetries    int           `json:"-" gorm:"default:3"`
+	RetryInterval time.Duration `json:"-" gorm:"default:60000000000"` // 60s in nanoseconds
+	Retries       int           `json:"-" gorm:"default:0"`
+
+	// Granular timeout configuration
+	DNSTimeout            time.Duration `json:"-" gorm:"default:5000000000"`  // 5s in nanoseconds
+	DialTimeout           time.Duration `json:"-" gorm:"default:10000000000"` // 10s in nanoseconds
+	TLSHandshakeTimeout   time.Duration `json:"-" gorm:"default:10000000000"` // 10s in nanoseconds
+	ResponseHeaderTimeout time.Duration `json:"-" gorm:"default:20000000000"` // 20s in nanoseconds
 }
 
 type MonitorHistory struct {
