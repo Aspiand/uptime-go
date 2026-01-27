@@ -78,13 +78,13 @@ Example:
 		}()
 
 		go func() {
-			log.Info().Msg("fetching ip address...")
+			log.Debug().Msg("fetching ip address...")
 			ip, err := net.GetIPAddress()
 			if err != nil {
 				log.Error().Err(err).Msg("failed to fetch ip address")
 				return
 			}
-			log.Info().Str("ip", ip).Msg("ip fetched successfully")
+			log.Debug().Str("ip", ip).Msg("ip fetched successfully")
 		}()
 
 		// API Section
