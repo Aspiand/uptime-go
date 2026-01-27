@@ -187,7 +187,8 @@ func (nc *NetworkConfig) CheckWebsite() (*CheckResults, error) {
 	bodyBuf := make([]byte, 1024)
 	_, _ = io.ReadFull(resp.Body, bodyBuf)
 
-	success := resp.StatusCode >= 200 && resp.StatusCode < 300
+	// Treat redirects (3xx) as UP so 302 doesn't mark the monitor down.
+	success := resp.StatusCode >= 200 && resp.StatusCode < 400
 	result.IsUp = success
 	result.StatusCode = resp.StatusCode
 

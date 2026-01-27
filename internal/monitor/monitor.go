@@ -63,6 +63,10 @@ func (m *UptimeMonitor) monitorWebsite(cfg *models.Monitor) {
 
 	// Perform initial check immediately
 	m.checkWebsite(cfg)
+	if cfg.Retries > 0 && cfg.RetryInterval > 0 {
+		// If initial check entered PENDING, switch to retry interval immediately.
+		ticker.Reset(cfg.RetryInterval)
+	}
 
 	for {
 		select {
