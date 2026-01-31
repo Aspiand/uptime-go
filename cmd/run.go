@@ -9,6 +9,7 @@ import (
 	"uptime-go/internal/configuration"
 	"uptime-go/internal/helper"
 	"uptime-go/internal/monitor"
+	"uptime-go/internal/models"
 	"uptime-go/internal/net"
 	"uptime-go/internal/net/database"
 
@@ -42,10 +43,12 @@ Example:
 			Msg("configuration")
 
 		var urls []string
+		configByURL := make(map[string]models.Monitor, len(configs))
 
 		for _, r := range configs {
 			r.ID = helper.GenerateRandomID()
 			urls = append(urls, r.URL)
+			configByURL[r.URL] = *r
 		}
 
 		// Initialize database
@@ -63,8 +66,34 @@ Example:
 			"interval",
 			"certificate_monitoring",
 			"certificate_expired_before",
+			"follow_redirects",
+			"max_retries",
+			"retry_interval",
+			"dns_timeout",
+			"dial_timeout",
+			"tls_handshake_timeout",
+			"response_header_timeout",
 		})
 		db.DB.Where("url IN ?", urls).Find(&configs)
+		for _, cfg := range configs {
+			src, ok := configByURL[cfg.URL]
+			if !ok {
+				continue
+			}
+			// Ensure runtime uses config values while keeping DB state fields.
+			cfg.Enabled = src.Enabled
+			cfg.Interval = src.Interval
+			cfg.ResponseTimeThreshold = src.ResponseTimeThreshold
+			cfg.CertificateMonitoring = src.CertificateMonitoring
+			cfg.CertificateExpiredBefore = src.CertificateExpiredBefore
+			cfg.FollowRedirects = src.FollowRedirects
+			cfg.MaxRetries = src.MaxRetries
+			cfg.RetryInterval = src.RetryInterval
+			cfg.DNSTimeout = src.DNSTimeout
+			cfg.DialTimeout = src.DialTimeout
+			cfg.TLSHandshakeTimeout = src.TLSHandshakeTimeout
+			cfg.ResponseHeaderTimeout = src.ResponseHeaderTimeout
+		}
 
 		// Initialize and start monitor
 		uptimeMonitor, err := monitor.NewUptimeMonitor(db, configs)
@@ -78,13 +107,13 @@ Example:
 		}()
 
 		go func() {
-			log.Info().Msg("fetching ip address...")
+			log.Debug().Msg("fetching ip address...")
 			ip, err := net.GetIPAddress()
 			if err != nil {
 				log.Error().Err(err).Msg("failed to fetch ip address")
 				return
 			}
-			log.Info().Str("ip", ip).Msg("ip fetched successfully")
+			log.Debug().Str("ip", ip).Msg("ip fetched successfully")
 		}()
 
 		// API Section
