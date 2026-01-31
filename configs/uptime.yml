@@ -2,6 +2,7 @@
 # retry_interval: interval between retry attempts when in PENDING state
 # max_retries: number of retry attempts before marking as DOWN (default: 3)
 # Granular timeouts: dns_timeout, dial_timeout, tls_handshake_timeout, response_header_timeout
+# ip_type: ipv4, ipv6, or both (default: ipv4)
 
 monitor:
   - url: "http://example.com"
@@ -10,6 +11,7 @@ monitor:
     response_time_threshold: 30s
     certificate_monitoring: true
     certificate_expired_before: 31d
+    ip_type: ipv4
     
     # Retry configuration (optional - defaults shown)
     max_retries: 3           # Retry 3 times before marking DOWN

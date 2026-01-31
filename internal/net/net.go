@@ -9,8 +9,15 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
+)
+
+const (
+	ipTypeBoth = "both"
+	ipTypeV4   = "ipv4"
+	ipTypeV6   = "ipv6"
 )
 
 type NetworkConfig struct {
@@ -19,6 +26,7 @@ type NetworkConfig struct {
 	Timeout         time.Duration
 	FollowRedirects bool
 	SkipSSL         bool
+	IPType          string
 
 	// Granular timeouts for different phases
 	DNSTimeout            time.Duration
@@ -105,15 +113,30 @@ func (nc *NetworkConfig) CheckWebsite() (*CheckResults, error) {
 				return nil, fmt.Errorf("invalid address: %w", err)
 			}
 
-			// Use "ip" network type for DNS lookup (works for both tcp and udp)
-			ips, err := net.DefaultResolver.LookupIP(dnsCtx, "ip", host)
+			ipVersion := normalizeIPType(nc.IPType)
+			lookupNetwork := "ip"
+			if ipVersion == ipTypeV4 {
+				lookupNetwork = "ip4"
+			} else if ipVersion == ipTypeV6 {
+				lookupNetwork = "ip6"
+			}
+
+			// Use "ip", "ip4", or "ip6" network type for DNS lookup
+			ips, err := net.DefaultResolver.LookupIP(dnsCtx, lookupNetwork, host)
 			if err != nil {
 				return nil, fmt.Errorf("DNS resolution failed: %w", err)
 			}
 			result.DNSTime = time.Since(dnsStart)
 
 			if len(ips) == 0 {
-				return nil, fmt.Errorf("no IP addresses found for host: %s", host)
+				switch ipVersion {
+				case ipTypeV4:
+					return nil, fmt.Errorf("no IPv4 addresses found for host: %s", host)
+				case ipTypeV6:
+					return nil, fmt.Errorf("no IPv6 addresses found for host: %s", host)
+				default:
+					return nil, fmt.Errorf("no IP addresses found for host: %s", host)
+				}
 			}
 
 			// TCP connection phase
@@ -265,6 +288,21 @@ func isIPAddress(host string) bool {
 	hostname := u.Hostname()
 
 	return net.ParseIP(hostname) != nil
+}
+
+func normalizeIPType(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "":
+		return ipTypeV4
+	case ipTypeBoth:
+		return ipTypeBoth
+	case ipTypeV4:
+		return ipTypeV4
+	case ipTypeV6:
+		return ipTypeV6
+	default:
+		return ipTypeV4
+	}
 }
 
 var (

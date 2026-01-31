@@ -20,6 +20,7 @@ type Monitor struct {
 	CertificateMonitoring    bool             `json:"-"`
 	CertificateExpiredBefore *time.Duration   `json:"-"`
 	FollowRedirects          bool             `json:"-"`
+	IPType                   string           `json:"-"`
 	IsUp                     *bool            `json:"is_up"`
 	StatusCode               *int             `json:"status_code"`
 	ResponseTime             *int64           `json:"response_time"`
@@ -45,7 +46,7 @@ type Monitor struct {
 
 type MonitorHistory struct {
 	ID           string    `json:"-" gorm:"primaryKey"`
-	MonitorID    string    `json:"-"`
+	MonitorID    string    `json:"-" gorm:"index"`
 	IsUp         bool      `json:"is_up" gorm:"index"`
 	StatusCode   int       `json:"-"`
 	ResponseTime int64     `json:"response_time"` // in milliseconds
@@ -55,7 +56,7 @@ type MonitorHistory struct {
 
 type Incident struct {
 	ID          string        `json:"id" gorm:"primaryKey"`
-	MonitorID   string        `json:"monitor_id"`
+	MonitorID   string        `json:"monitor_id" gorm:"index"`
 	IncidentID  uint64        `json:"-"`
 	Type        incident.Type `json:"type" gorm:"index"`
 	Description string        `json:"description"`

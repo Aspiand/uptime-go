@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"uptime-go/internal/helper"
 	"uptime-go/internal/models"
 
@@ -25,6 +26,7 @@ type MonitorConfig struct {
 	ResponseTimeThreshold    string `mapstructure:"response_time_threshold" yaml:"response_time_threshold" json:"response_time_threshold"`
 	CertificateMonitoring    bool   `mapstructure:"certificate_monitoring" yaml:"certificate_monitoring" json:"certificate_monitoring"`
 	CertificateExpiredBefore string `mapstructure:"certificate_expired_before" yaml:"certificate_expired_before" json:"certificate_expired_before"`
+	IPType                   string `mapstructure:"ip_type" yaml:"ip_type,omitempty" json:"ip_type,omitempty"`
 
 	// Retry configuration
 	MaxRetries    int    `mapstructure:"max_retries" yaml:"max_retries,omitempty" json:"max_retries,omitempty"`
@@ -121,6 +123,14 @@ func Load(configPath string) error {
 		}
 
 		URL := helper.NormalizeURL(monitor.URL)
+		ipType := normalizeIPType(monitor.IPType)
+		if monitor.IPType != "" && ipType == "" {
+			log.Warn().Msgf("invalid ip_type %q for %s, defaulting to ipv4", monitor.IPType, URL)
+			ipType = "ipv4"
+		}
+		if ipType == "" {
+			ipType = "ipv4"
+		}
 		interval := helper.ParseDuration(monitor.Interval, "5m")
 		timeout := helper.ParseDuration(monitor.ResponseTimeThreshold, "30s")
 		certificateExpiredBefore := helper.ParseDuration(monitor.CertificateExpiredBefore, "31d")
@@ -150,6 +160,7 @@ func Load(configPath string) error {
 			CertificateMonitoring:    monitor.CertificateMonitoring,
 			CertificateExpiredBefore: &certificateExpiredBefore,
 			FollowRedirects:          followRedirects,
+			IPType:                   ipType,
 			MaxRetries:               maxRetries,
 			RetryInterval:            retryInterval,
 			DNSTimeout:               dnsTimeout,
@@ -193,6 +204,7 @@ func setDefaultMonitor(v *viper.Viper) error {
 			Interval:              "5m",
 			ResponseTimeThreshold: "10s",
 			FollowRedirects:       &followRedirects,
+			IPType:                "ipv4",
 		},
 	})
 
@@ -201,4 +213,19 @@ func setDefaultMonitor(v *viper.Viper) error {
 	}
 
 	return nil
+}
+
+func normalizeIPType(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "":
+		return "ipv4"
+	case "both":
+		return "both"
+	case "ipv4":
+		return "ipv4"
+	case "ipv6":
+		return "ipv6"
+	default:
+		return ""
+	}
 }

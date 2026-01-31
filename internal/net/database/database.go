@@ -36,7 +36,9 @@ func New(dbPath string) (*Database, error) {
 	log.Info().Str("database", dbPath).Msg("Connectiong to database...")
 
 	// Open the database connection using GORM and SQLite with connection pool configuration
-	gormDB, errOpen := gorm.Open(sqlite.Open(dbPath+"?_journal_mode=WAL&_pragma=foreign_keys"), &gorm.Config{})
+	gormDB, errOpen := gorm.Open(sqlite.Open(dbPath+"?_journal_mode=WAL&_pragma=foreign_keys"), &gorm.Config{
+		Logger: newGormLogger(),
+	})
 	if errOpen != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", errOpen)
 	}
@@ -53,6 +55,10 @@ func New(dbPath string) (*Database, error) {
 	sqlDB.SetConnMaxLifetime(time.Hour)
 	sqlDB.SetConnMaxIdleTime(30 * time.Minute)
 
+	if err := gormDB.Exec("PRAGMA busy_timeout = 5000").Error; err != nil {
+		log.Warn().Err(err).Msg("failed to set sqlite busy_timeout")
+	}
+
 	// Migrate the schema
 	if errMigrate := gormDB.AutoMigrate(
 		&models.Monitor{},
@@ -66,10 +72,16 @@ func New(dbPath string) (*Database, error) {
 }
 
 func InitializeTestDatabase() (*Database, error) {
-	db, err := gorm.Open(sqlite.Open("file::memory:?_journal_mode=WAL&_pragma=foreign_keys"))
+	db, err := gorm.Open(sqlite.Open("file::memory:?_journal_mode=WAL&_pragma=foreign_keys"), &gorm.Config{
+		Logger: newGormLogger(),
+	})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	if err := db.Exec("PRAGMA busy_timeout = 5000").Error; err != nil {
+		log.Warn().Err(err).Msg("failed to set sqlite busy_timeout")
 	}
 
 	if err := db.AutoMigrate(

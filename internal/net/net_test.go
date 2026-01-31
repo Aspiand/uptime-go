@@ -1,6 +1,8 @@
 package net
 
 import (
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -126,5 +128,74 @@ func TestCheckWebsiteSuccess(t *testing.T) {
 	}
 	if results.ErrorMessage != "" {
 		t.Errorf("Expected empty error message, but got %s", results.ErrorMessage)
+	}
+}
+
+func TestCheckWebsiteIPv4Only(t *testing.T) {
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to listen on IPv4: %v", err)
+	}
+	t.Cleanup(func() { _ = listener.Close() })
+
+	server := &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("OK"))
+		}),
+	}
+	go func() {
+		_ = server.Serve(listener)
+	}()
+	t.Cleanup(func() { _ = server.Close() })
+
+	url := "http://" + listener.Addr().String()
+	nc := NetworkConfig{
+		URL:       url,
+		Timeout:   5 * time.Second,
+		IPType:    "ipv4",
+	}
+
+	results, err := nc.CheckWebsite()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if results == nil || !results.IsUp {
+		t.Fatalf("expected IPv4 check to be up, got %+v", results)
+	}
+}
+
+func TestCheckWebsiteIPv6Only(t *testing.T) {
+	listener, err := net.Listen("tcp6", "[::1]:0")
+	if err != nil {
+		t.Skipf("IPv6 not available: %v", err)
+	}
+	t.Cleanup(func() { _ = listener.Close() })
+
+	server := &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("OK"))
+		}),
+	}
+	go func() {
+		_ = server.Serve(listener)
+	}()
+	t.Cleanup(func() { _ = server.Close() })
+
+	addr := listener.Addr().(*net.TCPAddr)
+	url := fmt.Sprintf("http://[%s]:%d", addr.IP.String(), addr.Port)
+	nc := NetworkConfig{
+		URL:       url,
+		Timeout:   5 * time.Second,
+		IPType:    "ipv6",
+	}
+
+	results, err := nc.CheckWebsite()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if results == nil || !results.IsUp {
+		t.Fatalf("expected IPv6 check to be up, got %+v", results)
 	}
 }
