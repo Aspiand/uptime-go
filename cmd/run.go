@@ -67,6 +67,7 @@ Example:
 			"certificate_monitoring",
 			"certificate_expired_before",
 			"follow_redirects",
+			"ip_type",
 			"max_retries",
 			"retry_interval",
 			"dns_timeout",
@@ -87,6 +88,7 @@ Example:
 			cfg.CertificateMonitoring = src.CertificateMonitoring
 			cfg.CertificateExpiredBefore = src.CertificateExpiredBefore
 			cfg.FollowRedirects = src.FollowRedirects
+			cfg.IPType = src.IPType
 			cfg.MaxRetries = src.MaxRetries
 			cfg.RetryInterval = src.RetryInterval
 			cfg.DNSTimeout = src.DNSTimeout

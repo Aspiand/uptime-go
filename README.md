@@ -22,6 +22,7 @@ monitor:
     enabled: true
     interval: 5m
     response_time_threshold: 5s
+    ip_type: ipv4
 ```
 
 ## Usage
