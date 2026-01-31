@@ -25,6 +25,17 @@ type MonitorConfig struct {
 	ResponseTimeThreshold    string `mapstructure:"response_time_threshold" yaml:"response_time_threshold" json:"response_time_threshold"`
 	CertificateMonitoring    bool   `mapstructure:"certificate_monitoring" yaml:"certificate_monitoring" json:"certificate_monitoring"`
 	CertificateExpiredBefore string `mapstructure:"certificate_expired_before" yaml:"certificate_expired_before" json:"certificate_expired_before"`
+
+	// Retry configuration
+	MaxRetries    int    `mapstructure:"max_retries" yaml:"max_retries,omitempty" json:"max_retries,omitempty"`
+	RetryInterval string `mapstructure:"retry_interval" yaml:"retry_interval,omitempty" json:"retry_interval,omitempty"`
+
+	// Granular timeout configuration
+	DNSTimeout            string `mapstructure:"dns_timeout" yaml:"dns_timeout,omitempty" json:"dns_timeout,omitempty"`
+	DialTimeout           string `mapstructure:"dial_timeout" yaml:"dial_timeout,omitempty" json:"dial_timeout,omitempty"`
+	TLSHandshakeTimeout   string `mapstructure:"tls_handshake_timeout" yaml:"tls_handshake_timeout,omitempty" json:"tls_handshake_timeout,omitempty"`
+	ResponseHeaderTimeout string `mapstructure:"response_header_timeout" yaml:"response_header_timeout,omitempty" json:"response_header_timeout,omitempty"`
+	FollowRedirects       *bool  `mapstructure:"follow_redirects" yaml:"follow_redirects" json:"follow_redirects"`
 }
 
 type AppConfig struct {
@@ -113,6 +124,23 @@ func Load(configPath string) error {
 		interval := helper.ParseDuration(monitor.Interval, "5m")
 		timeout := helper.ParseDuration(monitor.ResponseTimeThreshold, "30s")
 		certificateExpiredBefore := helper.ParseDuration(monitor.CertificateExpiredBefore, "31d")
+		followRedirects := true
+		if monitor.FollowRedirects != nil {
+			followRedirects = *monitor.FollowRedirects
+		}
+
+		// Parse retry configuration
+		maxRetries := monitor.MaxRetries
+		if maxRetries == 0 {
+			maxRetries = 3 // Default to 3 retries
+		}
+		retryInterval := helper.ParseDuration(monitor.RetryInterval, "60s")
+
+		// Parse granular timeouts
+		dnsTimeout := helper.ParseDuration(monitor.DNSTimeout, "5s")
+		dialTimeout := helper.ParseDuration(monitor.DialTimeout, "10s")
+		tlsTimeout := helper.ParseDuration(monitor.TLSHandshakeTimeout, "10s")
+		headerTimeout := helper.ParseDuration(monitor.ResponseHeaderTimeout, "20s")
 
 		Config.Monitor = append(Config.Monitor, &models.Monitor{
 			URL:                      URL,
@@ -121,6 +149,13 @@ func Load(configPath string) error {
 			ResponseTimeThreshold:    timeout,
 			CertificateMonitoring:    monitor.CertificateMonitoring,
 			CertificateExpiredBefore: &certificateExpiredBefore,
+			FollowRedirects:          followRedirects,
+			MaxRetries:               maxRetries,
+			RetryInterval:            retryInterval,
+			DNSTimeout:               dnsTimeout,
+			DialTimeout:              dialTimeout,
+			TLSHandshakeTimeout:      tlsTimeout,
+			ResponseHeaderTimeout:    headerTimeout,
 		})
 	}
 
@@ -150,12 +185,14 @@ func UpdateConfig(configPath string, jsonConfig []byte) error {
 }
 
 func setDefaultMonitor(v *viper.Viper) error {
+	followRedirects := true
 	v.Set("monitor", []MonitorConfig{
 		{
 			URL:                   "https://genbucyber.com",
 			Enabled:               true,
 			Interval:              "5m",
 			ResponseTimeThreshold: "10s",
+			FollowRedirects:       &followRedirects,
 		},
 	})
 

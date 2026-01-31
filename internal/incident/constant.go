@@ -4,6 +4,13 @@ type Severity string
 type Status string
 type Type string
 
+// Monitor status constants
+const (
+	StatusUP      = "UP"
+	StatusDOWN    = "DOWN"
+	StatusPENDING = "PENDING" // Waiting for retry verification
+)
+
 const (
 	INFO     Severity = "INFO"
 	LOW      Severity = "LOW"
