@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"uptime-go/internal/version"
 )
 
 const (
@@ -190,7 +192,7 @@ func (nc *NetworkConfig) CheckWebsite() (*CheckResults, error) {
 		return result, err
 	}
 
-	req.Header.Set("User-Agent", "GenbuUptimePlugin/0.2")
+	req.Header.Set("User-Agent", "GenbuUptimePlugin/"+version.VERSION)
 	req.Header.Set("Accept", "*/*")
 	req.Header.Set("Connection", "close")
 

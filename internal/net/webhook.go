@@ -11,6 +11,7 @@ import (
 	"uptime-go/internal/configuration"
 	"uptime-go/internal/incident"
 	"uptime-go/internal/models"
+	"uptime-go/internal/version"
 
 	"github.com/rs/zerolog/log"
 )
@@ -48,6 +49,7 @@ func sendRequest(method string, url string, payload any) (*http.Response, []byte
 	}
 
 	request.Header.Set("Authorization", "Bearer "+token)
+	request.Header.Set("User-Agent", "GenbuUptimePlugin/"+version.VERSION)
 	request.Header.Set("Content-Type", "application/json")
 
 	response, err := client.Do(request)

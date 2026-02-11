@@ -39,10 +39,10 @@ jobs:
       - name: Run tests
         run: go test -v -short ./...
 
-      - name: Get version from root.go
+      - name: Get version from version.go
         id: get_version
         run: |
-          VERSION=$(grep -oP 'VERSION\s*=\s*"\K[^"]+' cmd/root.go)
+          VERSION=$(grep -oP 'VERSION\s*=\s*"\K[^"]+' internal/version/version.go)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION"
 
