@@ -1,9 +1,11 @@
 package monitor
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	stdnet "net"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
@@ -144,7 +146,7 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 
 	result, err := nc.CheckWebsite()
 	if err != nil {
-		log.Error().Err(err).Msgf("Error checking %s", monitor.URL)
+		log.Error().Err(err).Msgf("Error checking %s: %v", monitor.URL, result.ErrorMessage)
 	}
 
 	// Log phase timings for debugging
@@ -168,7 +170,8 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 	}
 
 	now := time.Now()
-	if newStatus == incident.StatusUP {
+	switch newStatus {
+	case incident.StatusUP:
 		// Website is UP
 		monitor.Retries = 0 // Reset retries
 		if monitor.LastUp == nil {
@@ -184,12 +187,12 @@ func (m *UptimeMonitor) checkWebsite(monitor *models.Monitor) {
 		log.Info().Msgf("%s - UP - Response time: %v - Status: %d",
 			monitor.URL, result.ResponseTime, result.StatusCode)
 
-	} else if newStatus == incident.StatusPENDING {
+	case incident.StatusPENDING:
 		// Website failed but we're retrying - don't trigger incident yet
 		log.Warn().Msgf("%s - PENDING - Retry %d/%d | Next retry in %v | Error: %s",
 			monitor.URL, monitor.Retries, monitor.MaxRetries, monitor.RetryInterval, result.ErrorMessage)
 
-	} else {
+	default:
 		// Website is DOWN (after all retries exhausted)
 		monitor.Retries = 0 // Reset for next cycle
 		m.handleWebsiteDown(monitor, result, err)
@@ -230,12 +233,27 @@ func (m *UptimeMonitor) handleWebsiteDown(monitor *models.Monitor, result *net.C
 	}
 
 	if err != nil {
-		if os.IsTimeout(err) {
+		isTimeout := false
+		var netErr stdnet.Error
+
+		if errors.As(err, &netErr) && netErr.Timeout() {
+			isTimeout = true
+		} else if errors.Is(err, context.DeadlineExceeded) {
+			isTimeout = true
+		}
+
+		description = result.ErrorMessage
+
+		if isTimeout {
 			incidentType = incident.Timeout
 			result.ResponseTime = monitor.ResponseTimeThreshold
-			description = fmt.Sprintf("Request timed out: %s", monitor.URL)
+			if description == "" {
+				description = fmt.Sprintf("Request timed out after %v: %s", monitor.ResponseTimeThreshold, monitor.URL)
+			}
 		} else {
-			description = fmt.Sprintf("An unexpected error occurred at %s", monitor.URL)
+			if description == "" {
+				description = fmt.Sprintf("An unexpected error occurred at %s: %v", monitor.URL, err)
+			}
 		}
 	} else {
 		description = fmt.Sprintf("Received non-successful status code: %d %s", result.StatusCode, http.StatusText(result.StatusCode))

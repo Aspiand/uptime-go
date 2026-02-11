@@ -66,12 +66,13 @@ func Load(configPath string) error {
 	agentConfig := viper.New()
 	agentConfig.SetConfigFile(OJTGUARDIAN_CONFIG)
 	agentConfig.SetConfigType("yaml")
-	if err := agentConfig.ReadInConfig(); err != nil {
-		return err
-	}
 
-	if err := agentConfig.Unmarshal(&Config.Agent); err != nil {
-		return err
+	if err := agentConfig.ReadInConfig(); err != nil {
+		log.Info().Err(err).Msg("Failed to read agent config")
+	} else {
+		if err := agentConfig.Unmarshal(&Config.Agent); err != nil {
+			return err
+		}
 	}
 
 	// Load monitor config

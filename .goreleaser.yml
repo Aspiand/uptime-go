@@ -15,7 +15,7 @@ builds:
     goarch:
       - amd64
     ldflags:
-      - -s -w -X uptime-go/cmd.VERSION={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+      - -s -w
 
 archives:
   - formats: ["tar.gz"]
