@@ -4,6 +4,7 @@ import (
 	"errors"
 	"runtime"
 	"uptime-go/internal/selfupdate"
+	"uptime-go/internal/version"
 
 	"github.com/spf13/cobra"
 )
@@ -22,7 +23,7 @@ var selfUpdateCmd = &cobra.Command{
 			return errors.New("self-update is only supported on Linux")
 		}
 
-		return selfupdate.Run(VERSION, dryRun, force)
+		return selfupdate.Run(version.VERSION, dryRun, force)
 	},
 }
 

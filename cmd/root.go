@@ -4,12 +4,11 @@ import (
 	"os"
 
 	"uptime-go/internal/configuration"
+	"uptime-go/internal/version"
 	"uptime-go/pkg/log"
 
 	"github.com/spf13/cobra"
 )
-
-const VERSION = "0.4.1"
 
 var (
 	configPath   string
@@ -21,7 +20,7 @@ var (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:     "uptime-go",
-	Version: VERSION,
+	Version: version.VERSION,
 	Short:   "An application to check website uptime",
 	Long: `A command-line tool to monitor the uptime of websites.
 It provides continuous monitoring of websites defined in the configuration file.
