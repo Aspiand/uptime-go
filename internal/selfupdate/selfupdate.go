@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	repoOwner = "Aspiand"
+	repoOwner = "genbucyber"
 	repoName  = "uptime-go"
 	apiURL    = "https://api.github.com/repos/%s/%s/releases/latest"
 )
