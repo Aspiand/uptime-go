@@ -123,14 +123,17 @@ func (db *Database) Upsert(record any) error {
 	return db.UpsertRecord(record, "id", nil)
 }
 
-func (db *Database) GetAllMonitors() ([]models.Monitor, error) {
+func (db *Database) GetMonitors(urls []string) ([]models.Monitor, error) {
 	var monitors []models.Monitor
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
 
-	if err := db.DB.Find(&monitors).Error; err != nil {
-		return nil, fmt.Errorf("failed to get all monitors: %w", err)
+	if err := db.DB.
+		Scopes(existsInConfigOnly(urls)).
+		Find(&monitors).Error; err != nil {
+		return nil, fmt.Errorf("failed to get monitors by config URLs: %w", err)
 	}
+
 	return monitors, nil
 }
 
@@ -165,4 +168,46 @@ func (db *Database) GetLastIncident(url string, incidentType incident.Type) *mod
 		Find(&incident)
 
 	return &incident
+}
+
+func (db *Database) GetMonitorHistoriesInDateRange(url string, from, to time.Time) ([]models.MonitorHistory, error) {
+	var histories []models.MonitorHistory
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
+
+	if err := db.DB.
+		Joins("JOIN monitors ON monitors.id = monitor_histories.monitor_id").
+		Where("monitors.url = ? AND monitor_histories.created_at BETWEEN ? AND ?", url, from, to).
+		Order("monitor_histories.created_at ASC").
+		Find(&histories).Error; err != nil {
+		return nil, fmt.Errorf("failed to get monitor histories for URL %s in date range %s to %s: %w", url, from, to, err)
+	}
+	return histories, nil
+}
+
+func (db *Database) GetMonitorHistoriesForURLsInDateRange(urls []string, from, to time.Time) (map[string][]models.MonitorHistory, error) {
+	allHistories := make([]models.MonitorHistory, 0)
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
+
+	if err := db.DB.
+		Preload("Monitor").
+		Joins("JOIN monitors ON monitors.id = monitor_histories.monitor_id").
+		Where("monitors.url IN ? AND monitor_histories.created_at BETWEEN ? AND ?", urls, from, to).
+		Order("monitors.url ASC, monitor_histories.created_at ASC").
+		Find(&allHistories).Error; err != nil {
+		return nil, fmt.Errorf("failed to get monitor histories for URLs %v in date range %s to %s: %w", urls, from, to, err)
+	}
+
+	historiesByMonitorURL := make(map[string][]models.MonitorHistory)
+	for _, history := range allHistories {
+		historiesByMonitorURL[history.Monitor.URL] = append(historiesByMonitorURL[history.Monitor.URL], history)
+	}
+	return historiesByMonitorURL, nil
+}
+
+func existsInConfigOnly(urls []string) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("url IN ?", urls)
+	}
 }
