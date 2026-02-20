@@ -160,6 +160,45 @@ func calculateUptimeStats(histories []models.MonitorHistory, from, to time.Time)
 	return result
 }
 
+func (s *Server) GetMonitoringHistoryReport(c *gin.Context) {
+	var params HistoryReportQueryParams
+
+	if err := c.ShouldBindQuery(&params); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid query parameters",
+		})
+		return
+	}
+
+	if params.URL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "URL parameter is required",
+		})
+		return
+	}
+
+	if params.Limit == 0 {
+		params.Limit = 1000
+	}
+
+	monitor, err := s.db.GetMonitorWithHistories(params.URL, params.Limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to retrieve monitor history",
+		})
+		return
+	}
+
+	if monitor == nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Record not found for the given URL",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, monitor)
+}
+
 // func (s *Server) GetMonitoringReport(c *gin.Context) {
 // 	var queryParams ReportQueryParams
 

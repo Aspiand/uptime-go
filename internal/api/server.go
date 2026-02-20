@@ -78,7 +78,7 @@ func (s *Server) setupRoutes() {
 
 	reportGroup := api.Group("/reports")
 	reportGroup.GET("/", s.GetMonitoringReport)
-	// reportGroup.GET("/history", s.GetMonitoringReport)
+	reportGroup.GET("/history", s.GetMonitoringHistoryReport)
 }
 
 func accessLogger() gin.HandlerFunc {
